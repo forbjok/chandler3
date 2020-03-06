@@ -1,0 +1,30 @@
+[package]
+name = "chandler"
+version = "3.0.0"
+authors = ["Forb.Jok <forbjok@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+path = "src/lib/lib.rs"
+
+# CLI tool binary
+[[bin]]
+name = "chandler"
+path = "src/cli/main.rs"
+
+[dependencies]
+chrono = "0.4.10"
+fern = "0.5.9"
+html5ever = "0.25.1"
+kuchiki = "0.8.0"
+lazy_static = "1.4.0"
+log = "0.4.8"
+reqwest = "0.9.24"
+serde = "1.0.104"
+serde_derive = "1.0.104"
+serde_json = "1.0.48"
+structopt = "0.3.9"
+toml = "0.5.6"
+winapi = "0.3.8"
