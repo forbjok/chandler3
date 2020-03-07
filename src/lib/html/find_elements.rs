@@ -1,10 +1,12 @@
+use std::collections::VecDeque;
+
 use html5ever::{local_name, LocalName};
 use kuchiki::*;
 
 use crate::util::IsSubset;
 
 pub struct FindElements<P> {
-    queue: Vec<NodeRef>,
+    queue: VecDeque<NodeRef>,
     find_name: LocalName,
     predicate: P,
 }
@@ -16,16 +18,9 @@ where
     type Item = NodeRef;
 
     fn next(&mut self) -> Option<NodeRef> {
-        loop {
+        // Grab next node from the queue
+        while let Some(node) = self.queue.pop_front() {
             let mut is_match = false;
-
-            // If node queue is empty, break out of the loop.
-            if self.queue.is_empty() {
-                break;
-            }
-
-            // Grab next node from the queue
-            let node = self.queue.remove(0);
 
             match node.data() {
                 NodeData::Element(data) => {
@@ -59,7 +54,7 @@ where
     P: Fn(&ElementData) -> bool,
 {
     FindElements {
-        queue: vec![node],
+        queue: Some(node).into_iter().collect(),
         find_name: find_name.into(),
         predicate,
     }
