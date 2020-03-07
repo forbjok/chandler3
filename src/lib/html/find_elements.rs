@@ -3,13 +3,16 @@ use kuchiki::*;
 
 use crate::util::IsSubset;
 
-pub struct FindElements<'a> {
+pub struct FindElements<P> {
     queue: Vec<NodeRef>,
     find_name: LocalName,
-    find_classes: Vec<&'a str>,
+    predicate: P,
 }
 
-impl<'a> Iterator for FindElements<'a> {
+impl<P> Iterator for FindElements<P>
+where
+    P: Fn(&ElementData) -> bool,
+{
     type Item = NodeRef;
 
     fn next(&mut self) -> Option<NodeRef> {
@@ -29,15 +32,9 @@ impl<'a> Iterator for FindElements<'a> {
                     let name = &data.name;
 
                     if name.local == self.find_name {
-                        if let Some(class_attr) = data.attributes.borrow().get(local_name!("class")) {
-                            // Split classes into a vector of strings
-                            let classes = class_attr.split(' ').collect::<Vec<&str>>();
+                        let predicate = &self.predicate;
 
-                            // Does the element have the specified classes?
-                            if self.find_classes.is_subset(&classes) {
-                                is_match = true;
-                            }
-                        }
+                        is_match = predicate(data);
                     }
                 }
 
@@ -57,10 +54,33 @@ impl<'a> Iterator for FindElements<'a> {
     }
 }
 
-pub fn find_elements<'a>(node: NodeRef, find_name: impl Into<LocalName>, find_classes: &[&'a str]) -> FindElements<'a> {
+pub fn find_elements<P>(node: NodeRef, find_name: impl Into<LocalName>, predicate: P) -> FindElements<P>
+where
+    P: Fn(&ElementData) -> bool,
+{
     FindElements {
         queue: vec![node],
         find_name: find_name.into(),
-        find_classes: find_classes.iter().map(|s| *s).collect(),
+        predicate,
     }
+}
+
+pub fn find_elements_with_classes<'a>(
+    node: NodeRef,
+    find_name: impl Into<LocalName>,
+    find_classes: &[&'a str],
+) -> impl Iterator<Item = NodeRef> + 'a {
+    let find_classes: Vec<&'a str> = find_classes.iter().map(|s| *s).collect();
+
+    find_elements(node, find_name, move |data: &ElementData| {
+        if let Some(class_attr) = data.attributes.borrow().get(local_name!("class")) {
+            // Split classes into a vector of strings
+            let classes = class_attr.split(' ').collect::<Vec<&str>>();
+
+            // Does the element have the specified classes?
+            find_classes.is_subset(&classes)
+        } else {
+            false
+        }
+    })
 }

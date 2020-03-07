@@ -44,7 +44,7 @@ impl MergeableImageboardThread for FourchanThread {
     }
 
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ThreadError> {
-        let thread_element = html::find_elements(self.root.clone(), local_name!("div"), &["thread"])
+        let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Error getting thread element!")))?;
 

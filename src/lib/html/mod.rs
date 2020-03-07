@@ -1,8 +1,10 @@
 mod find_elements;
+mod purge_scripts;
 
 use kuchiki::*;
 
 pub use self::find_elements::*;
+pub use self::purge_scripts::*;
 
 pub fn parse_string(html_str: &str) -> NodeRef {
     use html5ever::tendril::TendrilSink;
