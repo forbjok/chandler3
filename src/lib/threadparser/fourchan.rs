@@ -59,7 +59,7 @@ impl MergeableImageboardThread for FourchanThread {
         }))
     }
 
-    fn merge_posts_from(&mut self, other: Self) -> Result<(), ThreadError> {
+    fn merge_posts_from(&mut self, other: &Self) -> Result<(), ThreadError> {
         let last_main_post = self.get_all_posts()?.last()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get last post!")))?;
 
@@ -137,8 +137,8 @@ mod tests {
         let thread2 = FourchanThread::from_document(dom2);
         let thread3 = FourchanThread::from_document(dom3);
 
-        thread1.merge_posts_from(thread2).unwrap();
-        thread1.merge_posts_from(thread3).unwrap();
+        thread1.merge_posts_from(&thread2).unwrap();
+        thread1.merge_posts_from(&thread3).unwrap();
 
         let dom1 = thread1.into_document();
 

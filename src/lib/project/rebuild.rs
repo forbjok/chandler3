@@ -43,7 +43,7 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
 
         let thread = fourchan::FourchanThread::from_document(dom);
 
-        first_thread.merge_posts_from(thread)
+        first_thread.merge_posts_from(&thread)
             .map_err(|err| ChandlerError::Other(Cow::Owned(err.to_string())))?;
     }
 
