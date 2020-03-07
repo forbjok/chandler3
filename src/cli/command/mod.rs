@@ -43,6 +43,14 @@ impl CommandError {
 impl From<ChandlerError> for CommandError {
     fn from(error: ChandlerError) -> Self {
         match error {
+            ChandlerError::CreateProject(err) => CommandError::new(
+                CommandErrorKind::Config,
+                format!("Error creating project: {}", err.to_string()),
+            ),
+            ChandlerError::LoadProject(err) => CommandError::new(
+                CommandErrorKind::Config,
+                format!("Error loading project: {}", err.to_string()),
+            ),
             ChandlerError::OpenConfig(err) => CommandError::new(
                 CommandErrorKind::Config,
                 format!("Error opening config file: {}", err.to_string()),

@@ -6,6 +6,8 @@ use crate::util;
 
 #[derive(Debug)]
 pub enum ChandlerError {
+    CreateProject(Cow<'static, str>),
+    LoadProject(Cow<'static, str>),
     OpenConfig(util::FileError),
     ReadConfig(io::Error),
     ParseConfig(Cow<'static, str>),
@@ -20,6 +22,8 @@ pub enum ChandlerError {
 impl fmt::Display for ChandlerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::CreateProject(err) => write!(f, "{}", err),
+            Self::LoadProject(err) => write!(f, "{}", err),
             Self::OpenConfig(err) => write!(f, "{}", err),
             Self::ReadConfig(err) => write!(f, "{}", err),
             Self::ParseConfig(err) => write!(f, "{}", err),

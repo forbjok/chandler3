@@ -1,4 +1,3 @@
-mod download;
 mod error;
 mod html;
 mod project;
