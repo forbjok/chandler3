@@ -25,16 +25,24 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
     let mut files_iter = files.iter();
 
     // Get the first file
-    let first_file = files_iter.next()
+    let first_file = files_iter
+        .next()
         .ok_or_else(|| ChandlerError::Other(Cow::Owned("First file not found!".to_owned())))?;
 
     let first_dom = parse_html_file(first_file)?;
     let mut first_thread = fourchan::FourchanThread::from_document(first_dom);
 
-    let mut first_thread_posts = first_thread.get_all_posts()
+    let mut first_thread_posts = first_thread
+        .get_all_posts()
         .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Couldn't get first thread posts: {}", err))))?;
 
-    println!("Thread no. {}", first_thread_posts.next().expect("First post not found in first thread!").id);
+    println!(
+        "Thread no. {}",
+        first_thread_posts
+            .next()
+            .expect("First post not found in first thread!")
+            .id
+    );
 
     for file in files_iter {
         println!("FILE: {:?}", file);
@@ -43,7 +51,8 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
 
         let thread = fourchan::FourchanThread::from_document(dom);
 
-        first_thread.merge_posts_from(&thread)
+        first_thread
+            .merge_posts_from(&thread)
             .map_err(|err| ChandlerError::Other(Cow::Owned(err.to_string())))?;
     }
 

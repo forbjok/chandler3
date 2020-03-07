@@ -49,14 +49,14 @@ impl From<ChandlerError> for CommandError {
             ),
             ChandlerError::ReadConfig(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error reading config file: {}", err))
-            },
+            }
             ChandlerError::ParseConfig(err) => CommandError::new(
                 CommandErrorKind::Config,
                 format!("Error parsing configuration: {}", err),
             ),
             ChandlerError::Config(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Configuration error: {}", err))
-            },
+            }
             ChandlerError::OpenFile(err) => CommandError::new(
                 CommandErrorKind::Config,
                 format!("Error opening file: {}", err.to_string()),
@@ -67,10 +67,10 @@ impl From<ChandlerError> for CommandError {
             ),
             ChandlerError::ReadFile(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error reading file: {}", err))
-            },
+            }
             ChandlerError::WriteFile(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error writing file: {}", err))
-            },
+            }
             ChandlerError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
         }
     }

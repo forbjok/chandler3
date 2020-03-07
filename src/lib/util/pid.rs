@@ -55,22 +55,13 @@ impl Drop for PidLock {
 #[cfg(windows)]
 fn process_exists(pid: u32) -> bool {
     use winapi::{
-        shared::minwindef::{
-            DWORD,
-            FALSE,
-            LPDWORD,
-        },
+        shared::minwindef::{DWORD, FALSE, LPDWORD},
         um::{
             handleapi::CloseHandle,
             minwinbase::STILL_ACTIVE,
-            processthreadsapi::{
-                GetExitCodeProcess,
-                OpenProcess,
-            },
-            winnt::{
-                PROCESS_QUERY_INFORMATION,
-            }
-        }
+            processthreadsapi::{GetExitCodeProcess, OpenProcess},
+            winnt::PROCESS_QUERY_INFORMATION,
+        },
     };
 
     // Try to open process

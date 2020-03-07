@@ -39,9 +39,7 @@ impl MergeableImageboardThread for FourchanThread {
     type Post = FourchanPost;
 
     fn from_document(document: Self::Document) -> Self {
-        Self {
-            root: document,
-        }
+        Self { root: document }
     }
 
     fn into_document(self) -> Self::Document {
@@ -49,7 +47,8 @@ impl MergeableImageboardThread for FourchanThread {
     }
 
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = FourchanPost>>, ThreadError> {
-        let thread_element = html::find_elements(self.root.clone(), local_name!("div"), &["thread"]).next()
+        let thread_element = html::find_elements(self.root.clone(), local_name!("div"), &["thread"])
+            .next()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Error getting thread element!")))?;
 
         let posts: Vec<NodeRef> = thread_element.children().collect();
@@ -60,10 +59,14 @@ impl MergeableImageboardThread for FourchanThread {
     }
 
     fn merge_posts_from(&mut self, other: &Self) -> Result<(), ThreadError> {
-        let last_main_post = self.get_all_posts()?.last()
+        let last_main_post = self
+            .get_all_posts()?
+            .last()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get last post!")))?;
 
-        let main_post_parent = last_main_post.node.parent()
+        let main_post_parent = last_main_post
+            .node
+            .parent()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get main post parent node!")))?;
 
         let mut other_thread_post_iter = other.get_all_posts()?;
@@ -93,7 +96,7 @@ fn get_post_id(node: NodeRef) -> Option<u32> {
             }
 
             None
-        },
+        }
 
         _ => None,
     }
@@ -116,7 +119,6 @@ mod tests {
 
     // Merged thread with all 3 posts
     const THREAD_MERGED: &'static str = r#"<div class="thread" id="t1"><div class="postContainer" id="pc1"></div><div class="postContainer" id="pc2"></div><div class="postContainer" id="pc3"></div></div>"#;
-
 
     #[test]
     fn can_merge_threads() {

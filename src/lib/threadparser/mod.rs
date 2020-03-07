@@ -14,7 +14,7 @@ impl fmt::Display for ThreadError {
     }
 }
 
-pub trait MergeableImageboardThread : Sized {
+pub trait MergeableImageboardThread: Sized {
     type Document;
     type Post;
 

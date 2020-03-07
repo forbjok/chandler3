@@ -21,7 +21,11 @@ pub fn download_thread(url: &str, thread_path: &Path) -> Result<PathBuf, std::io
     // Construct filename
     let filename = originals_path.join(format!("{}.html", unix_now));
 
-    debug!("Downloading thread from {} to file: {}", url, filename.to_str().unwrap_or("<CANNOT TO STRING>"));
+    debug!(
+        "Downloading thread from {} to file: {}",
+        url,
+        filename.to_str().unwrap_or("<CANNOT TO STRING>")
+    );
 
     {
         // Create file for writing

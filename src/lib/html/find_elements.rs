@@ -39,9 +39,9 @@ impl<'a> Iterator for FindElements<'a> {
                             }
                         }
                     }
-                },
+                }
 
-                _ => { },
+                _ => {}
             };
 
             // Add child nodes to queue

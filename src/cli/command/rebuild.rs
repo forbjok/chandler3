@@ -19,11 +19,9 @@ pub fn rebuild(path: &Path) -> Result<String, CommandError> {
     let result = project.rebuild();
 
     match result {
-        Ok(_path) => { },
-        Err(_msg) => { },
+        Ok(_path) => {}
+        Err(_msg) => {}
     };
 
-    Ok(serde_json::to_string(&RebuildResult {
-        input_file_count: 1,
-    }).unwrap())
+    Ok(serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap())
 }
