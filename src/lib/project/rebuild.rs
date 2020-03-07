@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use kuchiki;
 
 use crate::error::*;
+use crate::html;
 use crate::threadparser::*;
 use crate::util;
 
@@ -30,6 +31,10 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
         .ok_or_else(|| ChandlerError::Other(Cow::Owned("First file not found!".to_owned())))?;
 
     let first_dom = parse_html_file(first_file)?;
+
+    // Purge all script tags
+    html::purge_scripts(first_dom.clone());
+
     let mut first_thread = fourchan::FourchanThread::from_document(first_dom);
 
     let mut first_thread_posts = first_thread
