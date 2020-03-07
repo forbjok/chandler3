@@ -44,9 +44,8 @@ impl<'a> Iterator for FindElements<'a> {
                 _ => { },
             };
 
-            for child in node.children() {
-                self.queue.push(child.clone());
-            }
+            // Add child nodes to queue
+            self.queue.extend(node.children());
 
             // If the node matched, return it.
             if is_match {
@@ -58,10 +57,10 @@ impl<'a> Iterator for FindElements<'a> {
     }
 }
 
-pub fn find_elements<'a>(handle: NodeRef, find_name: LocalName, find_classes: Vec<&'a str>) -> FindElements<'a> {
+pub fn find_elements<'a>(node: NodeRef, find_name: impl Into<LocalName>, find_classes: &[&'a str]) -> FindElements<'a> {
     FindElements {
-        queue: vec![handle],
-        find_name: find_name,
-        find_classes: find_classes,
+        queue: vec![node],
+        find_name: find_name.into(),
+        find_classes: find_classes.iter().map(|s| *s).collect(),
     }
 }

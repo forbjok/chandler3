@@ -3,16 +3,16 @@ use std::borrow::Cow;
 use super::*;
 use crate::html;
 
-use html5ever::{local_name};
+use html5ever::local_name;
 use kuchiki::*;
 
 pub struct FourchanThread {
-    pub dom: NodeRef,
+    pub root: NodeRef,
 }
 
 pub struct FourchanPost {
     pub id: u32,
-    pub handle: NodeRef,
+    pub node: NodeRef,
 }
 
 struct GetAllPosts {
@@ -23,10 +23,10 @@ impl Iterator for GetAllPosts {
     type Item = FourchanPost;
 
     fn next(&mut self) -> Option<FourchanPost> {
-        if let Some(post_handle) = self.post_iter.next() {
+        if let Some(post_node) = self.post_iter.next() {
             return Some(FourchanPost {
-                id: get_post_id(post_handle.clone()).expect("Error getting post ID!"),
-                handle: post_handle.clone(),
+                id: get_post_id(post_node.clone()).expect("Error getting post ID!"),
+                node: post_node.clone(),
             });
         }
 
@@ -40,19 +40,19 @@ impl MergeableImageboardThread for FourchanThread {
 
     fn from_document(document: Self::Document) -> Self {
         Self {
-            dom: document,
+            root: document,
         }
     }
 
     fn into_document(self) -> Self::Document {
-        self.dom
+        self.root
     }
 
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = FourchanPost>>, ThreadError> {
-        let thread_element = html::find_elements(self.dom.clone(), local_name!("div"), vec!["thread"]).next()
+        let thread_element = html::find_elements(self.root.clone(), local_name!("div"), &["thread"]).next()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Error getting thread element!")))?;
 
-        let posts: Vec<NodeRef> = thread_element.children().map(|c| c.clone()).collect();
+        let posts: Vec<NodeRef> = thread_element.children().collect();
 
         Ok(Box::new(GetAllPosts {
             post_iter: Box::new(posts.into_iter()),
@@ -63,7 +63,7 @@ impl MergeableImageboardThread for FourchanThread {
         let last_main_post = self.get_all_posts()?.last()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get last post!")))?;
 
-        let main_post_parent = last_main_post.handle.parent()
+        let main_post_parent = last_main_post.node.parent()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get main post parent node!")))?;
 
         let mut other_thread_post_iter = other.get_all_posts()?;
@@ -73,14 +73,8 @@ impl MergeableImageboardThread for FourchanThread {
                 continue;
             }
 
-            // Detach post from other thread
-            other_post.handle.detach();
-
-            // Create new node
-            //let new_node = Node::new(other_post.handle.clone().data);
-
             // Append it to main thread
-            main_post_parent.append(other_post.handle);
+            main_post_parent.append(other_post.node);
         }
 
         Ok(())
@@ -91,7 +85,7 @@ fn get_post_id(node: NodeRef) -> Option<u32> {
     match node.data() {
         NodeData::Element(data) => {
             // Try to locate "id" attribute
-            if let Some(id_attr) = data.attributes.borrow().get("id") {
+            if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
                 // Try to parse it as an integer, skipping the "pc" prefix
                 if let Ok(id) = id_attr[2..].parse::<u32>() {
                     return Some(id);
@@ -126,23 +120,24 @@ mod tests {
 
     #[test]
     fn can_merge_threads() {
-        let dom1 = html::parse_string(THREAD1);
-        let dom2 = html::parse_string(THREAD2);
-        let dom3 = html::parse_string(THREAD3);
-        let merged_dom = html::parse_string(THREAD_MERGED);
+        let node1 = html::parse_string(THREAD1);
+        let node2 = html::parse_string(THREAD2);
+        let node3 = html::parse_string(THREAD3);
+        let merged_node = html::parse_string(THREAD_MERGED);
 
-        let expected_html = html::to_string(merged_dom);
+        let expected_html = html::to_string(merged_node);
 
-        let mut thread1 = FourchanThread::from_document(dom1);
-        let thread2 = FourchanThread::from_document(dom2);
-        let thread3 = FourchanThread::from_document(dom3);
+        let mut thread1 = FourchanThread::from_document(node1);
+        let thread2 = FourchanThread::from_document(node2);
+        let thread3 = FourchanThread::from_document(node3);
 
         thread1.merge_posts_from(&thread2).unwrap();
         thread1.merge_posts_from(&thread3).unwrap();
 
-        let dom1 = thread1.into_document();
+        let node1 = thread1.into_document();
 
-        let result_html = html::to_string(dom1);
+        let result_html = html::to_string(node1);
+
         assert_eq!(result_html, expected_html);
     }
 }
