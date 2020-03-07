@@ -2,7 +2,9 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 
 use super::*;
+use crate::error::ChandlerError;
 use crate::html;
+use crate::util;
 
 use html5ever::local_name;
 use kuchiki::*;
@@ -73,26 +75,41 @@ impl MergeableImageboardThread for FourchanThread {
         self.root
     }
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ThreadError> {
+    fn from_file(file_path: &Path) -> Result<Self, ChandlerError> {
+        let node = html::parse_file(file_path)?;
+
+        Ok(Self::from_document(node))
+    }
+
+    fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
+        let mut file = util::create_file(file_path).map_err(|err| ChandlerError::CreateFile(err))?;
+
+        html5ever::serialize(&mut file, &self.root, Default::default())
+            .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
+
+        Ok(())
+    }
+
+    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
-            .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Error getting thread element!")))?;
+            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Error getting thread element!")))?;
 
         let posts = thread_element.children().collect();
 
         Ok(Box::new(GetPosts { posts }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ThreadError> {
+    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError> {
         let last_main_post = self
             .get_all_posts()?
             .last()
-            .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get last post!")))?;
+            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Could not get last post!")))?;
 
         let main_post_parent = last_main_post
             .node
             .parent()
-            .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get main post parent node!")))?;
+            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Could not get main post parent node!")))?;
 
         let mut other_thread_post_iter = other.get_all_posts()?;
 
@@ -110,6 +127,14 @@ impl MergeableImageboardThread for FourchanThread {
         }
 
         Ok(new_posts)
+    }
+
+    fn get_links(&self) -> Result<Vec<html::Link>, ChandlerError> {
+        Ok(html::find_links(self.root.clone()))
+    }
+
+    fn get_post_links(&self, post: &Self::Post) -> Result<Vec<html::Link>, ChandlerError> {
+        Ok(html::find_links(post.node.clone()))
     }
 }
 

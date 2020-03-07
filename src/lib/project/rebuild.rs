@@ -1,25 +1,10 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use kuchiki;
-
 use crate::error::*;
 use crate::html;
 use crate::threadparser::*;
 use crate::util;
-
-fn parse_html_file(filename: &Path) -> Result<kuchiki::NodeRef, ChandlerError> {
-    use html5ever::tendril::TendrilSink;
-
-    let mut f = util::open_file(filename).map_err(|err| ChandlerError::OpenFile(err))?;
-
-    let dom = kuchiki::parse_html()
-        .from_utf8()
-        .read_from(&mut f)
-        .map_err(|err| ChandlerError::ReadFile(err))?;
-
-    Ok(dom)
-}
 
 pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), ChandlerError> {
     // Get file iterator
@@ -30,7 +15,7 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
         .next()
         .ok_or_else(|| ChandlerError::Other(Cow::Owned("First file not found!".to_owned())))?;
 
-    let first_dom = parse_html_file(first_file)?;
+    let first_dom = html::parse_file(first_file)?;
 
     // Purge all script tags
     html::purge_scripts(first_dom.clone());
@@ -52,7 +37,7 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
     for file in files_iter {
         println!("FILE: {:?}", file);
 
-        let dom = parse_html_file(file)?;
+        let dom = html::parse_file(file)?;
 
         let thread = fourchan::FourchanThread::from_document(dom);
 

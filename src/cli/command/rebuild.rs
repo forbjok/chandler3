@@ -14,14 +14,9 @@ pub fn rebuild(path: &Path) -> Result<String, CommandError> {
     }
 
     // Try to load Chandler project
-    let project = ChandlerProject::load(&path)?;
+    let mut project = ChandlerProject::<chandler::threadparser::fourchan::FourchanThread>::load(&path)?;
 
-    let result = project.rebuild();
-
-    match result {
-        Ok(_path) => {}
-        Err(_msg) => {}
-    };
+    project.rebuild()?;
 
     Ok(serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap())
 }

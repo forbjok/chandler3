@@ -9,6 +9,7 @@ use super::*;
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkState {
+    pub unprocessed: Vec<String>,
     pub failed: Vec<String>,
 }
 
