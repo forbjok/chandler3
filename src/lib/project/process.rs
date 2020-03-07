@@ -13,20 +13,26 @@ where
         let new_posts = original_thread.merge_posts_from(&new_thread)?;
 
         for post in new_posts.iter() {
-            let post_links = original_thread.get_post_links(post)?;
-
-            for link in post_links.iter().filter_map(|l| l.file_link()) {
-                state.links.unprocessed.push(link);
-            }
+            original_thread.for_post_links(&post, |link| {
+                if let Some(href) = link.file_link() {
+                    state.links.unprocessed.push(href);
+                    link.replace("--FILE--");
+                } else {
+                    link.replace("");
+                }
+            })?;
         }
 
         original_thread
     } else {
-        let links = new_thread.get_links()?;
-
-        for link in links.iter().filter_map(|l| l.file_link()) {
-            state.links.unprocessed.push(link);
-        }
+        new_thread.for_links(|link| {
+            if let Some(href) = link.file_link() {
+                state.links.unprocessed.push(href);
+                link.replace("--FILE--");
+            } else {
+                link.replace("");
+            }
+        })?;
 
         new_thread
     };

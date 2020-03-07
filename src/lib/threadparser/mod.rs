@@ -19,8 +19,11 @@ pub trait MergeableImageboardThread: Sized {
 
     fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError>;
 
-    fn get_links(&self) -> Result<Vec<html::Link>, ChandlerError>;
-    fn get_post_links(&self, post: &Self::Post) -> Result<Vec<html::Link>, ChandlerError>;
+    fn for_links(&self, action: impl FnMut(&mut html::Link)) -> Result<(), ChandlerError>;
+    fn for_post_links(&self, post: &Self::Post, action: impl FnMut(&mut html::Link)) -> Result<(), ChandlerError>;
+
+    /// Purge all script tags
+    fn purge_scripts(&self) -> Result<(), ChandlerError>;
 }
 
 pub mod fourchan;

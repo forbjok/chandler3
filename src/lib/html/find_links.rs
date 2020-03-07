@@ -97,6 +97,35 @@ impl Link {
             true
         })
     }
+
+    pub fn replace(&mut self, with: &str) {
+        if let NodeData::Element(data) = self.node.data() {
+            let mut attrs = data.attributes.borrow_mut();
+
+            match self.tag {
+                LinkTag::A => {
+                    if let Some(href_attr) = attrs.get_mut(local_name!("href")) {
+                        href_attr.clear();
+                        href_attr.push_str(with);
+                    }
+                }
+                LinkTag::Img => {
+                    if let Some(src_attr) = attrs.get_mut(local_name!("src")) {
+                        src_attr.clear();
+                        src_attr.push_str(with);
+                    }
+                }
+                LinkTag::Link => {
+                    if let Some(href_attr) = attrs.get_mut(local_name!("href")) {
+                        href_attr.clear();
+                        href_attr.push_str(with);
+                    }
+                }
+            };
+
+            attrs.insert("data-original-href", "ORIGINAL".to_owned());
+        }
+    }
 }
 
 pub fn find_links(node: NodeRef) -> Vec<Link> {

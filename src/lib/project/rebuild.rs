@@ -1,12 +1,17 @@
 use std::borrow::Cow;
-use std::path::{Path, PathBuf};
 
 use crate::error::*;
-use crate::html;
 use crate::threadparser::*;
-use crate::util;
 
-pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), ChandlerError> {
+use super::*;
+
+pub fn rebuild_thread<TP>(project: &mut ChandlerProject<TP>) -> Result<(), ChandlerError>
+where
+    TP: MergeableImageboardThread,
+{
+    let files = get_html_files(&project.originals_path)
+        .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
+
     // Get file iterator
     let mut files_iter = files.iter();
 
@@ -15,49 +20,17 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
         .next()
         .ok_or_else(|| ChandlerError::Other(Cow::Owned("First file not found!".to_owned())))?;
 
-    let first_dom = html::parse_file(first_file)?;
+    let first_thread = TP::from_file(first_file)?;
 
-    // Purge all script tags
-    html::purge_scripts(first_dom.clone());
-
-    let mut first_thread = fourchan::FourchanThread::from_document(first_dom);
-
-    let mut first_thread_posts = first_thread
-        .get_all_posts()
-        .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Couldn't get first thread posts: {}", err))))?;
-
-    println!(
-        "Thread no. {}",
-        first_thread_posts
-            .next()
-            .expect("First post not found in first thread!")
-            .id
-    );
+    project.thread = Some(first_thread);
 
     for file in files_iter {
         println!("FILE: {:?}", file);
 
-        let dom = html::parse_file(file)?;
-
-        let thread = fourchan::FourchanThread::from_document(dom);
-
-        first_thread
-            .merge_posts_from(&thread)
-            .map_err(|err| ChandlerError::Other(Cow::Owned(err.to_string())))?;
+        process_thread(project, file)?;
     }
 
-    let mut outfile = util::create_file(destination_file).map_err(|err| ChandlerError::CreateFile(err))?;
-
-    let first_dom = first_thread.into_document();
-
-    let links = html::find_links(first_dom.clone());
-    for link in links.iter() {
-        dbg!(link.link());
-    }
-
-    html5ever::serialize(&mut outfile, &first_dom, Default::default())
-        .ok()
-        .expect("Serialization failed");
+    project.write_thread()?;
 
     Ok(())
 }

@@ -43,8 +43,8 @@ where
 }
 
 pub trait Project {
-    fn update(&mut self) -> Result<PathBuf, ChandlerError>;
-    fn rebuild(&mut self) -> Result<PathBuf, ChandlerError>;
+    fn update(&mut self) -> Result<(), ChandlerError>;
+    fn rebuild(&mut self) -> Result<(), ChandlerError>;
 }
 
 impl<TP> ChandlerProject<TP>
@@ -110,13 +110,21 @@ where
             thread,
         })
     }
+
+    pub fn write_thread(&self) -> Result<(), ChandlerError> {
+        if let Some(thread) = self.thread.as_ref() {
+            thread.write_file(&self.root_path.join(THREAD_FILE_NAME))?;
+        }
+
+        Ok(())
+    }
 }
 
 impl<TP> Project for ChandlerProject<TP>
 where
     TP: MergeableImageboardThread,
 {
-    fn update(&mut self) -> Result<PathBuf, ChandlerError> {
+    fn update(&mut self) -> Result<(), ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -134,15 +142,10 @@ where
         // Process the new HTML
         process_thread(self, &thread_file_path)?;
 
-        Ok(thread_file_path)
+        Ok(())
     }
 
-    fn rebuild(&mut self) -> Result<PathBuf, ChandlerError> {
-        let files = get_html_files(&self.originals_path).unwrap();
-        let destination_file = self.root_path.join("thread.html");
-
-        rebuild_thread(files.as_slice(), &destination_file)?;
-
-        Ok(destination_file)
+    fn rebuild(&mut self) -> Result<(), ChandlerError> {
+        rebuild_thread(self)
     }
 }

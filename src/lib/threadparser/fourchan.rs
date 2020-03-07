@@ -129,12 +129,30 @@ impl MergeableImageboardThread for FourchanThread {
         Ok(new_posts)
     }
 
-    fn get_links(&self) -> Result<Vec<html::Link>, ChandlerError> {
-        Ok(html::find_links(self.root.clone()))
+    fn for_links(&self, mut action: impl FnMut(&mut html::Link)) -> Result<(), ChandlerError> {
+        let links = html::find_links(self.root.clone());
+
+        for mut link in links.into_iter() {
+            action(&mut link);
+        }
+
+        Ok(())
     }
 
-    fn get_post_links(&self, post: &Self::Post) -> Result<Vec<html::Link>, ChandlerError> {
-        Ok(html::find_links(post.node.clone()))
+    fn for_post_links(&self, post: &Self::Post, mut action: impl FnMut(&mut html::Link)) -> Result<(), ChandlerError> {
+        let links = html::find_links(post.node.clone());
+
+        for mut link in links.into_iter() {
+            action(&mut link);
+        }
+
+        Ok(())
+    }
+
+    fn purge_scripts(&self) -> Result<(), ChandlerError> {
+        html::purge_scripts(self.root.clone());
+
+        Ok(())
     }
 }
 
