@@ -23,7 +23,7 @@ pub trait MergeableImageboardThread: Sized {
 
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ThreadError>;
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<(), ThreadError>;
+    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ThreadError>;
 }
 
 pub mod fourchan;

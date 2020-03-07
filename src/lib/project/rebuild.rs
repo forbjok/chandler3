@@ -65,6 +65,11 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
 
     let first_dom = first_thread.into_document();
 
+    let links = html::find_links(first_dom.clone());
+    for link in links.iter() {
+        dbg!(link.link());
+    }
+
     html5ever::serialize(&mut outfile, &first_dom, Default::default())
         .ok()
         .expect("Serialization failed");

@@ -7,7 +7,6 @@ use crate::util::IsSubset;
 
 pub struct FindElements<P> {
     queue: VecDeque<NodeRef>,
-    find_name: LocalName,
     predicate: P,
 }
 
@@ -24,13 +23,9 @@ where
 
             match node.data() {
                 NodeData::Element(data) => {
-                    let name = &data.name;
+                    let predicate = &self.predicate;
 
-                    if name.local == self.find_name {
-                        let predicate = &self.predicate;
-
-                        is_match = predicate(data);
-                    }
+                    is_match = predicate(data);
                 }
 
                 _ => {}
@@ -49,13 +44,12 @@ where
     }
 }
 
-pub fn find_elements<P>(node: NodeRef, find_name: impl Into<LocalName>, predicate: P) -> FindElements<P>
+pub fn find_elements<P>(node: NodeRef, predicate: P) -> FindElements<P>
 where
     P: Fn(&ElementData) -> bool,
 {
     FindElements {
         queue: Some(node).into_iter().collect(),
-        find_name: find_name.into(),
         predicate,
     }
 }
@@ -65,17 +59,22 @@ pub fn find_elements_with_classes<'a>(
     find_name: impl Into<LocalName>,
     find_classes: &[&'a str],
 ) -> impl Iterator<Item = NodeRef> + 'a {
+    let find_name = find_name.into();
     let find_classes: Vec<&'a str> = find_classes.iter().map(|s| *s).collect();
 
-    find_elements(node, find_name, move |data: &ElementData| {
-        if let Some(class_attr) = data.attributes.borrow().get(local_name!("class")) {
-            // Split classes into a vector of strings
-            let classes = class_attr.split(' ').collect::<Vec<&str>>();
+    find_elements(node, move |data: &ElementData| {
+        if data.name.local == find_name {
+            if let Some(class_attr) = data.attributes.borrow().get(local_name!("class")) {
+                // Split classes into a vector of strings
+                let classes = class_attr.split(' ').collect::<Vec<&str>>();
 
-            // Does the element have the specified classes?
-            find_classes.is_subset(&classes)
-        } else {
-            false
+                // Does the element have the specified classes?
+                if find_classes.is_subset(&classes) {
+                    return true;
+                }
+            }
         }
+
+        false
     })
 }

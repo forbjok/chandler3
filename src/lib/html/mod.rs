@@ -1,9 +1,11 @@
 mod find_elements;
+mod find_links;
 mod purge_scripts;
 
 use kuchiki::*;
 
 pub use self::find_elements::*;
+pub use self::find_links::*;
 pub use self::purge_scripts::*;
 
 pub fn parse_string(html_str: &str) -> NodeRef {

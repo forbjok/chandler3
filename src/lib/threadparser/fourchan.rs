@@ -11,9 +11,36 @@ pub struct FourchanThread {
     pub root: NodeRef,
 }
 
+#[derive(Clone, Debug)]
 pub struct FourchanPost {
     pub id: u32,
     pub node: NodeRef,
+}
+
+impl FourchanPost {
+    pub fn from_node(node: NodeRef) -> Option<Self> {
+        // Try to get post ID from node
+        let id = (|| {
+            match node.data() {
+                NodeData::Element(data) => {
+                    // Try to locate "id" attribute
+                    if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
+                        // Try to parse it as an integer, skipping the "pc" prefix
+                        if let Ok(id) = id_attr[2..].parse::<u32>() {
+                            return Some(id);
+                        }
+                    }
+                }
+
+                _ => {}
+            }
+
+            None
+        })();
+
+        // Convert ID and node into post if found
+        id.map(|id| Self { id, node })
+    }
 }
 
 struct GetPosts {
@@ -24,10 +51,13 @@ impl Iterator for GetPosts {
     type Item = FourchanPost;
 
     fn next(&mut self) -> Option<FourchanPost> {
-        self.posts.pop_front().map(|node| FourchanPost {
-            id: get_post_id(node.clone()).expect("Error getting post ID!"),
-            node: node.clone(),
-        })
+        while let Some(node) = self.posts.pop_front() {
+            if let Some(post) = FourchanPost::from_node(node) {
+                return Some(post);
+            }
+        }
+
+        None
     }
 }
 
@@ -53,7 +83,7 @@ impl MergeableImageboardThread for FourchanThread {
         Ok(Box::new(GetPosts { posts }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<(), ThreadError> {
+    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ThreadError> {
         let last_main_post = self
             .get_all_posts()?
             .last()
@@ -66,34 +96,20 @@ impl MergeableImageboardThread for FourchanThread {
 
         let mut other_thread_post_iter = other.get_all_posts()?;
 
+        let mut new_posts: Vec<FourchanPost> = Vec::new();
+
         while let Some(other_post) = other_thread_post_iter.next() {
             if other_post.id <= last_main_post.id {
                 continue;
             }
 
             // Append it to main thread
-            main_post_parent.append(other_post.node);
+            main_post_parent.append(other_post.node.clone());
+
+            new_posts.push(other_post);
         }
 
-        Ok(())
-    }
-}
-
-fn get_post_id(node: NodeRef) -> Option<u32> {
-    match node.data() {
-        NodeData::Element(data) => {
-            // Try to locate "id" attribute
-            if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
-                // Try to parse it as an integer, skipping the "pc" prefix
-                if let Ok(id) = id_attr[2..].parse::<u32>() {
-                    return Some(id);
-                }
-            }
-
-            None
-        }
-
-        _ => None,
+        Ok(new_posts)
     }
 }
 
