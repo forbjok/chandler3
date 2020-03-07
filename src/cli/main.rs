@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
 
-use chandler;
-
 mod command;
 
 #[derive(StructOpt, Debug)]

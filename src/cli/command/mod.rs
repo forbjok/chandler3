@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::io;
 
 mod grab;
 mod rebuild;
@@ -8,11 +7,6 @@ pub use grab::*;
 pub use rebuild::*;
 
 use chandler::ChandlerError;
-
-#[derive(Debug)]
-pub enum CommandResult {
-    Rebuild
-}
 
 #[derive(Debug)]
 pub enum CommandErrorKind {

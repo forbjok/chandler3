@@ -6,7 +6,6 @@ pub fn download_thread(url: &str, thread_path: &Path) -> Result<PathBuf, std::io
     use std::fs::{self, File};
 
     use chrono::Utc;
-    use reqwest;
 
     // Construct paths
     let project_path = thread_path.join(".chandler");

@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use std::fmt;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use kuchiki;
@@ -10,20 +8,7 @@ use crate::threadparser::*;
 use crate::util;
 
 fn parse_html_file(filename: &Path) -> Result<kuchiki::NodeRef, ChandlerError> {
-    use std::fs::File;
-
-    use html5ever::parse_document;
-    use html5ever::driver::ParseOpts;
     use html5ever::tendril::TendrilSink;
-    use html5ever::tree_builder::TreeBuilderOpts;
-
-    let opts = ParseOpts {
-        tree_builder: TreeBuilderOpts {
-            drop_doctype: false,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
 
     let mut f = util::open_file(filename).map_err(|err| ChandlerError::OpenFile(err))?;
 
@@ -47,7 +32,7 @@ pub fn rebuild_thread(files: &[PathBuf], destination_file: &Path) -> Result<(), 
     let mut first_thread = fourchan::FourchanThread::from_document(first_dom);
 
     let mut first_thread_posts = first_thread.get_all_posts()
-        .map_err(|err| ChandlerError::Other(Cow::Owned("Couldn't get first thread posts!".to_owned())))?;
+        .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Couldn't get first thread posts: {}", err))))?;
 
     println!("Thread no. {}", first_thread_posts.next().expect("First post not found in first thread!").id);
 

@@ -21,7 +21,7 @@ pub trait MergeableImageboardThread : Sized {
     fn from_document(document: Self::Document) -> Self;
     fn into_document(self) -> Self::Document;
 
-    fn get_all_posts(&self) -> Result<Box<Iterator<Item = Self::Post>>, ThreadError>;
+    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ThreadError>;
 
     fn merge_posts_from(&mut self, other: Self) -> Result<(), ThreadError>;
 }

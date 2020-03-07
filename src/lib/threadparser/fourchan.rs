@@ -59,7 +59,7 @@ impl MergeableImageboardThread for FourchanThread {
         }))
     }
 
-    fn merge_posts_from(&mut self, mut other: Self) -> Result<(), ThreadError> {
+    fn merge_posts_from(&mut self, other: Self) -> Result<(), ThreadError> {
         let last_main_post = self.get_all_posts()?.last()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Could not get last post!")))?;
 
@@ -107,8 +107,7 @@ fn get_post_id(node: NodeRef) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::html::*;
-    use crate::parsers::*;
+    use crate::html;
 
     use super::*;
 
@@ -127,12 +126,12 @@ mod tests {
 
     #[test]
     fn can_merge_threads() {
-        let dom1 = parse_string(THREAD1);
-        let dom2 = parse_string(THREAD2);
-        let dom3 = parse_string(THREAD3);
-        let merged_dom = parse_string(THREAD_MERGED);
+        let dom1 = html::parse_string(THREAD1);
+        let dom2 = html::parse_string(THREAD2);
+        let dom3 = html::parse_string(THREAD3);
+        let merged_dom = html::parse_string(THREAD_MERGED);
 
-        let expected_html = dom_to_string(merged_dom);
+        let expected_html = html::to_string(merged_dom);
 
         let mut thread1 = FourchanThread::from_document(dom1);
         let thread2 = FourchanThread::from_document(dom2);
@@ -143,7 +142,7 @@ mod tests {
 
         let dom1 = thread1.into_document();
 
-        let result_html = dom_to_string(dom1);
+        let result_html = html::to_string(dom1);
         assert_eq!(result_html, expected_html);
     }
 }

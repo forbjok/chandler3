@@ -5,17 +5,7 @@ use kuchiki::*;
 pub use self::find_elements::*;
 
 pub fn parse_string(html_str: &str) -> NodeRef {
-    use html5ever::driver::ParseOpts;
     use html5ever::tendril::TendrilSink;
-    use html5ever::tree_builder::TreeBuilderOpts;
-
-    let opts = ParseOpts {
-        tree_builder: TreeBuilderOpts {
-            drop_doctype: false,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
 
     kuchiki::parse_html()
         .from_utf8()

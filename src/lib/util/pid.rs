@@ -68,7 +68,6 @@ fn process_exists(pid: u32) -> bool {
                 OpenProcess,
             },
             winnt::{
-                HANDLE,
                 PROCESS_QUERY_INFORMATION,
             }
         }
@@ -80,7 +79,7 @@ fn process_exists(pid: u32) -> bool {
     if handle.is_null() {
         false
     } else {
-        let mut exitcode: LPDWORD = unsafe { std::mem::zeroed() };
+        let exitcode: LPDWORD = unsafe { std::mem::zeroed() };
 
         // Try to get exit code for process
         let get_exitcode_result = unsafe { GetExitCodeProcess(handle, exitcode) };
