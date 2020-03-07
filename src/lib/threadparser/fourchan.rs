@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::VecDeque;
 
 use super::*;
 use crate::html;
@@ -15,22 +16,18 @@ pub struct FourchanPost {
     pub node: NodeRef,
 }
 
-struct GetAllPosts {
-    post_iter: Box<dyn Iterator<Item = NodeRef>>,
+struct GetPosts {
+    posts: VecDeque<NodeRef>,
 }
 
-impl Iterator for GetAllPosts {
+impl Iterator for GetPosts {
     type Item = FourchanPost;
 
     fn next(&mut self) -> Option<FourchanPost> {
-        if let Some(post_node) = self.post_iter.next() {
-            return Some(FourchanPost {
-                id: get_post_id(post_node.clone()).expect("Error getting post ID!"),
-                node: post_node.clone(),
-            });
-        }
-
-        None
+        self.posts.pop_front().map(|node| FourchanPost {
+            id: get_post_id(node.clone()).expect("Error getting post ID!"),
+            node: node.clone(),
+        })
     }
 }
 
@@ -46,16 +43,14 @@ impl MergeableImageboardThread for FourchanThread {
         self.root
     }
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = FourchanPost>>, ThreadError> {
+    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ThreadError> {
         let thread_element = html::find_elements(self.root.clone(), local_name!("div"), &["thread"])
             .next()
             .ok_or_else(|| ThreadError::Other(Cow::Borrowed("Error getting thread element!")))?;
 
-        let posts: Vec<NodeRef> = thread_element.children().collect();
+        let posts = thread_element.children().collect();
 
-        Ok(Box::new(GetAllPosts {
-            post_iter: Box::new(posts.into_iter()),
-        }))
+        Ok(Box::new(GetPosts { posts }))
     }
 
     fn merge_posts_from(&mut self, other: &Self) -> Result<(), ThreadError> {
