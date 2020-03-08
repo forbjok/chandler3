@@ -14,7 +14,6 @@ mod state;
 
 use crate::error::*;
 use crate::threadparser::*;
-use crate::util;
 
 use self::config::*;
 use self::download::*;

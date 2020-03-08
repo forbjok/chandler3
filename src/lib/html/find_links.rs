@@ -1,4 +1,4 @@
-use html5ever::local_name;
+use html5ever::{local_name, LocalName};
 use kuchiki::*;
 
 use super::*;
@@ -14,6 +14,16 @@ pub enum LinkTag {
 pub struct Link {
     node: NodeRef,
     tag: LinkTag,
+}
+
+impl LinkTag {
+    pub fn attr_name(&self) -> LocalName {
+        match self {
+            LinkTag::A => local_name!("href"),
+            LinkTag::Img => local_name!("src"),
+            LinkTag::Link => local_name!("href"),
+        }
+    }
 }
 
 impl Link {
@@ -52,24 +62,12 @@ impl Link {
 
     pub fn link(&self) -> Option<String> {
         if let NodeData::Element(data) = self.node.data() {
+            let attr_name = self.tag.attr_name();
+
             let attrs = data.attributes.borrow();
 
-            match self.tag {
-                LinkTag::A => {
-                    if let Some(href_attr) = attrs.get(local_name!("href")) {
-                        return Some(href_attr.to_owned());
-                    }
-                }
-                LinkTag::Img => {
-                    if let Some(src_attr) = attrs.get(local_name!("src")) {
-                        return Some(src_attr.to_owned());
-                    }
-                }
-                LinkTag::Link => {
-                    if let Some(href_attr) = attrs.get(local_name!("href")) {
-                        return Some(href_attr.to_owned());
-                    }
-                }
+            if let Some(attr_value) = attrs.get(attr_name) {
+                return Some(attr_value.to_owned());
             }
         }
 
@@ -100,30 +98,22 @@ impl Link {
 
     pub fn replace(&mut self, with: &str) {
         if let NodeData::Element(data) = self.node.data() {
+            let attr_name = self.tag.attr_name();
+
             let mut attrs = data.attributes.borrow_mut();
 
-            match self.tag {
-                LinkTag::A => {
-                    if let Some(href_attr) = attrs.get_mut(local_name!("href")) {
-                        href_attr.clear();
-                        href_attr.push_str(with);
-                    }
-                }
-                LinkTag::Img => {
-                    if let Some(src_attr) = attrs.get_mut(local_name!("src")) {
-                        src_attr.clear();
-                        src_attr.push_str(with);
-                    }
-                }
-                LinkTag::Link => {
-                    if let Some(href_attr) = attrs.get_mut(local_name!("href")) {
-                        href_attr.clear();
-                        href_attr.push_str(with);
-                    }
-                }
-            };
+            let mut original_value: Option<String> = None;
 
-            attrs.insert("data-original-href", "ORIGINAL".to_owned());
+            if let Some(attr_value) = attrs.get_mut(&attr_name) {
+                original_value = Some(attr_value.clone());
+
+                attr_value.clear();
+                attr_value.push_str(with);
+            }
+
+            if let Some(original_value) = original_value {
+                attrs.insert(format!("data-original-{}", &attr_name), original_value);
+            }
         }
     }
 }
@@ -181,5 +171,46 @@ mod tests {
         let links: Vec<String> = links.into_iter().filter_map(|link| link.file_link()).collect();
 
         assert_eq!(links, expected_links);
+    }
+
+    const HTML_REPLACE_LINKS: &'static str = r###"
+<html>
+    <head></head>
+    <body>
+        <div>
+            <a href="a"></a>
+            <img src="images/file.png">
+            <link href="css/style.css" rel="stylesheet">
+        </div>
+    </body>
+</html>
+"###;
+
+    const HTML_REPLACE_LINKS_EXPECTED_RESULT: &'static str = r###"
+<html>
+    <head></head>
+    <body>
+        <div>
+            <a data-original-href="a" href="A"></a>
+            <img data-original-src="images/file.png" src="IMAGES/FILE.PNG">
+            <link data-original-href="css/style.css" href="CSS/STYLE.CSS" rel="stylesheet">
+        </div>
+    </body>
+</html>
+"###;
+
+    #[test]
+    fn can_replace_links() {
+        let node = parse_string(&normalize(HTML_REPLACE_LINKS));
+
+        for link in find_links(node.clone()).iter_mut() {
+            if let Some(value) = link.link() {
+                link.replace(&value.to_uppercase());
+            }
+        }
+
+        let result = to_string(node);
+
+        assert_eq!(result, normalize(HTML_REPLACE_LINKS_EXPECTED_RESULT));
     }
 }
