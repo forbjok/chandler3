@@ -79,6 +79,7 @@ impl From<ChandlerError> for CommandError {
             ChandlerError::WriteFile(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error writing file: {}", err))
             }
+            ChandlerError::Download(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
             ChandlerError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
         }
     }

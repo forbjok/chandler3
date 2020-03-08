@@ -16,6 +16,7 @@ pub enum ChandlerError {
     CreateFile(util::FileError),
     ReadFile(io::Error),
     WriteFile(io::Error),
+    Download(Cow<'static, str>),
     Other(Cow<'static, str>),
 }
 
@@ -32,6 +33,7 @@ impl fmt::Display for ChandlerError {
             Self::CreateFile(err) => write!(f, "{}", err),
             Self::ReadFile(err) => write!(f, "{}", err),
             Self::WriteFile(err) => write!(f, "{}", err),
+            Self::Download(err) => write!(f, "{}", err),
             Self::Other(err) => write!(f, "{}", err),
         }
     }

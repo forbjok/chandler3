@@ -13,16 +13,10 @@ where
         .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
 
     // Get file iterator
-    let mut files_iter = files.iter();
+    let files_iter = files.iter();
 
-    // Get the first file
-    let first_file = files_iter
-        .next()
-        .ok_or_else(|| ChandlerError::Other(Cow::Owned("First file not found!".to_owned())))?;
-
-    let first_thread = TP::from_file(first_file)?;
-
-    project.thread = Some(first_thread);
+    // Set thread to None to ensure thread is regenerated from scratch.
+    project.thread = None;
 
     for file in files_iter {
         println!("FILE: {:?}", file);
