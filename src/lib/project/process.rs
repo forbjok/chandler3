@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use url::Url;
 
 use crate::html;
@@ -9,6 +11,8 @@ where
     TP: MergeableImageboardThread,
 {
     let state = &mut project.state;
+    let extensions: HashSet<String> = project.config.download_extensions.iter().cloned().collect();
+
     let thread_url = Url::parse(&project.config.url)
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
@@ -23,7 +27,7 @@ where
         // Process links for all new posts.
         for post in new_posts.iter() {
             original_thread.for_post_links(&post, |link| {
-                if let Some(link_info) = process_link(link, &thread_url)? {
+                if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
                     state.links.unprocessed.push(link_info);
                 }
 
@@ -40,7 +44,7 @@ where
 
         // Process all links in the new thread.
         new_thread.for_links(|link| {
-            if let Some(link_info) = process_link(link, &thread_url)? {
+            if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
                 state.links.unprocessed.push(link_info);
             }
 
@@ -55,17 +59,27 @@ where
     Ok(())
 }
 
-fn process_link(link: &mut html::Link, thread_url: &Url) -> Result<Option<LinkInfo>, ChandlerError> {
+fn process_link(
+    link: &mut html::Link,
+    thread_url: &Url,
+    extensions: &HashSet<String>,
+) -> Result<Option<LinkInfo>, ChandlerError> {
     if let Some(href) = link.file_link() {
-        if let Some(path) = local_path_from_url(&href, thread_url)? {
-            link.replace(&path);
+        if let Some(extension) = href.rsplit('.').next() {
+            if extensions.contains(extension) {
+                if let Some(path) = local_path_from_url(&href, thread_url)? {
+                    link.replace(&path);
 
-            Ok(Some(LinkInfo { url: href, path }))
-        } else {
-            return Err(ChandlerError::Other(
-                format!("Could not generate local path for url: {}", &href).into(),
-            ));
+                    return Ok(Some(LinkInfo { url: href, path }));
+                } else {
+                    return Err(ChandlerError::Other(
+                        format!("Could not generate local path for url: {}", &href).into(),
+                    ));
+                }
+            }
         }
+
+        Ok(None)
     } else {
         Ok(None)
     }
