@@ -15,9 +15,12 @@ where
     // Parse new thread
     let new_thread = TP::from_file(thread_file_path)?;
 
+    // If there is already a main thread...
     let thread = if let Some(mut original_thread) = project.thread.take() {
+        // Merge posts from new thread into the main thread.
         let new_posts = original_thread.merge_posts_from(&new_thread)?;
 
+        // Process links for all new posts.
         for post in new_posts.iter() {
             original_thread.for_post_links(&post, |link| {
                 if let Some(link_info) = process_link(link, &thread_url)? {
@@ -30,9 +33,12 @@ where
 
         original_thread
     } else {
-        // Purge all script tags from the thread HTML
+        // Otherwise...
+
+        // Purge all script tags from the thread HTML.
         new_thread.purge_scripts()?;
 
+        // Process all links in the new thread.
         new_thread.for_links(|link| {
             if let Some(link_info) = process_link(link, &thread_url)? {
                 state.links.unprocessed.push(link_info);
