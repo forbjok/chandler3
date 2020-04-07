@@ -6,55 +6,33 @@ use crate::html;
 
 use super::*;
 
-pub fn process_thread<TP>(project: &mut ChandlerProject<TP>, thread_file_path: &Path) -> Result<(), ChandlerError>
-where
-    TP: MergeableImageboardThread,
-{
+pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<(), ChandlerError> {
     let state = &mut project.state;
     let extensions: HashSet<String> = project.config.download_extensions.iter().cloned().collect();
 
     let thread_url = Url::parse(&project.config.url)
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
-    // Parse new thread
-    let new_thread = TP::from_file(thread_file_path)?;
-
     // If there is already a main thread...
-    let thread = if let Some(mut original_thread) = project.thread.take() {
-        // Merge posts from new thread into the main thread.
-        let new_posts = original_thread.merge_posts_from(&new_thread)?;
-
-        // Process links for all new posts.
-        for post in new_posts.iter() {
-            original_thread.for_post_links(&post, |link| {
-                if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
-                    state.links.unprocessed.push(link_info);
-                }
-
-                Ok(())
-            })?;
-        }
-
-        original_thread
+    let update_result = if let Some(mut original_thread) = project.thread.as_mut() {
+        original_thread.update_from(thread_file_path)?
     } else {
         // Otherwise...
 
-        // Purge all script tags from the thread HTML.
-        new_thread.purge_scripts()?;
+        // Parse new thread
+        let mut new_thread = project.config.parser.create_thread_updater_from(thread_file_path)?;
+        let update_result = new_thread.perform_initial_cleanup()?;
 
-        // Process all links in the new thread.
-        new_thread.for_links(|link| {
-            if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
-                state.links.unprocessed.push(link_info);
-            }
+        project.thread = Some(new_thread);
 
-            Ok(())
-        })?;
-
-        new_thread
+        update_result
     };
 
-    project.thread = Some(thread);
+    for mut link in update_result.new_links {
+        if let Some(link_info) = process_link(&mut link, &thread_url, &extensions)? {
+            state.links.unprocessed.push(link_info);
+        }
+    }
 
     Ok(())
 }

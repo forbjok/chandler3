@@ -5,10 +5,7 @@ use crate::threadparser::*;
 
 use super::*;
 
-pub fn rebuild_thread<TP>(project: &mut ChandlerProject<TP>) -> Result<(), ChandlerError>
-where
-    TP: MergeableImageboardThread,
-{
+pub fn rebuild_thread(project: &mut ChandlerProject) -> Result<(), ChandlerError> {
     let files = get_html_files(&project.originals_path)
         .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
 

@@ -3,13 +3,21 @@ use serde_json;
 
 use crate::error::*;
 use crate::util;
+use crate::threadupdater::CreateThreadUpdater;
 
 use super::*;
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Parser {
+    #[serde(rename = "4chan")]
+    FourChan,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectConfig {
-    pub parser: String,
+    pub parser: Parser,
     pub url: String,
     pub download_extensions: Vec<String>,
 }
@@ -28,5 +36,15 @@ impl ProjectConfig {
             .map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))?;
 
         Ok(())
+    }
+}
+
+impl CreateThreadUpdater for Parser {
+    fn create_thread_updater_from(&self, path: &Path) -> Result<Box<dyn ThreadUpdater>, ChandlerError> {
+        use crate::threadupdater::*;
+
+        Ok(match self {
+            Self::FourChan => Box::new(fourchan::FourchanThreadUpdater::from_file(path)?),
+        })
     }
 }

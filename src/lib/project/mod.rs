@@ -13,7 +13,7 @@ mod rebuild;
 mod state;
 
 use crate::error::*;
-use crate::threadparser::*;
+use crate::threadupdater::*;
 
 use self::config::*;
 use self::download::*;
@@ -28,17 +28,13 @@ const CONFIG_FILE_NAME: &str = "thread.json";
 const STATE_FILE_NAME: &str = "state.json";
 const THREAD_FILE_NAME: &str = "thread.html";
 
-#[derive(Debug)]
-pub struct ChandlerProject<TP>
-where
-    TP: MergeableImageboardThread,
-{
+pub struct ChandlerProject {
     root_path: PathBuf,
     project_path: PathBuf,
     originals_path: PathBuf,
     config: ProjectConfig,
     state: ProjectState,
-    thread: Option<TP>,
+    thread: Option<Box<dyn ThreadUpdater>>,
 }
 
 pub trait Project {
@@ -46,17 +42,14 @@ pub trait Project {
     fn rebuild(&mut self) -> Result<(), ChandlerError>;
 }
 
-impl<TP> ChandlerProject<TP>
-where
-    TP: MergeableImageboardThread,
-{
+impl ChandlerProject {
     pub fn create(path: impl AsRef<Path>, url: &str) -> Result<Self, ChandlerError> {
         let root_path = path.as_ref().to_path_buf();
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
 
         let config = ProjectConfig {
-            parser: "4chan".to_owned(),
+            parser: Parser::FourChan,
             url: url.to_owned(),
             download_extensions: vec![
                 "ico".to_owned(),
@@ -98,7 +91,7 @@ where
         let state = ProjectState::load(project_path.join(STATE_FILE_NAME))?;
 
         // Try to load current thread
-        let thread = TP::from_file(&root_path.join(THREAD_FILE_NAME)).ok();
+        let thread = config.parser.create_thread_updater_from(&root_path.join(THREAD_FILE_NAME)).ok();
 
         Ok(ChandlerProject {
             root_path: root_path,
@@ -119,10 +112,7 @@ where
     }
 }
 
-impl<TP> Project for ChandlerProject<TP>
-where
-    TP: MergeableImageboardThread,
-{
+impl Project for ChandlerProject {
     fn update(&mut self) -> Result<(), ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();

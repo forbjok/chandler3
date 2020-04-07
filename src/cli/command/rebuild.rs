@@ -14,7 +14,7 @@ pub fn rebuild(path: &Path) -> Result<String, CommandError> {
     }
 
     // Try to load Chandler project
-    let mut project = ChandlerProject::<chandler::threadparser::fourchan::FourchanThread>::load(&path)?;
+    let mut project = ChandlerProject::load(&path)?;
 
     project.rebuild()?;
 
