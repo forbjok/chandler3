@@ -135,7 +135,7 @@ impl MergeableImageboardThread for FourchanThread {
     ) -> Result<(), ChandlerError> {
         let links = html::find_links(self.root.clone());
 
-        for mut link in links.into_iter() {
+        for link in links.into_iter() {
             action(link)?;
         }
 
@@ -149,7 +149,7 @@ impl MergeableImageboardThread for FourchanThread {
     ) -> Result<(), ChandlerError> {
         let links = html::find_links(post.node.clone());
 
-        for mut link in links.into_iter() {
+        for link in links.into_iter() {
             action(link)?;
         }
 

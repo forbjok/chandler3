@@ -14,7 +14,7 @@ pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) ->
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
     // If there is already a main thread...
-    let update_result = if let Some(mut original_thread) = project.thread.as_mut() {
+    let update_result = if let Some(original_thread) = project.thread.as_mut() {
         original_thread.update_from(thread_file_path)?
     } else {
         // Otherwise...
@@ -28,6 +28,7 @@ pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) ->
         update_result
     };
 
+    // Process new links.
     for mut link in update_result.new_links {
         if let Some(link_info) = process_link(&mut link, &thread_url, &extensions)? {
             state.links.unprocessed.push(link_info);
