@@ -6,7 +6,7 @@ use chandler::{ChandlerProject, Project};
 
 use super::*;
 
-pub fn rebuild(path: &Path) -> Result<String, CommandError> {
+pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
     struct RebuildResult {
@@ -18,5 +18,8 @@ pub fn rebuild(path: &Path) -> Result<String, CommandError> {
 
     project.rebuild()?;
 
-    Ok(serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap())
+    let result = serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap();
+    dbg!(result);
+
+    Ok(())
 }

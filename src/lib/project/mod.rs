@@ -63,8 +63,12 @@ impl ChandlerProject {
 
         let state: ProjectState = Default::default();
 
-        fs::create_dir_all(&root_path).map_err(|err| {
+        fs::create_dir_all(&project_path).map_err(|err| {
             ChandlerError::CreateProject(Cow::Owned(format!("Cannot create project directory: {}", err)))
+        })?;
+
+        fs::create_dir_all(&originals_path).map_err(|err| {
+            ChandlerError::CreateProject(Cow::Owned(format!("Cannot create originals directory: {}", err)))
         })?;
 
         // Save initial project config and state

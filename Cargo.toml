@@ -21,6 +21,7 @@ opt-level = 3
 
 [dependencies]
 chrono = "0.4.10"
+dirs = "2.0.2"
 fern = "0.5.9"
 html5ever = "0.25.1"
 kuchiki = "0.8.0"

@@ -4,6 +4,7 @@ use log::{debug, LevelFilter};
 use structopt::StructOpt;
 
 mod command;
+mod config;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Chandler", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
