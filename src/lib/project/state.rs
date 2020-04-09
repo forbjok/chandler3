@@ -6,7 +6,7 @@ use crate::util;
 
 use super::*;
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LinkInfo {
     pub url: String,
     pub path: String,
@@ -15,7 +15,6 @@ pub struct LinkInfo {
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkState {
-    #[serde(default)]
     pub unprocessed: Vec<LinkInfo>,
     pub failed: Vec<String>,
 }

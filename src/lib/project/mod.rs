@@ -129,11 +129,14 @@ impl Project for ChandlerProject {
         let url = &self.config.url;
         debug!("Downloading thread from {} to file: {}", url, &filename);
 
-        // Download new HTML
-        download_thread(url, &thread_file_path)?;
+        // Download new thread HTML.
+        download_file(url, &thread_file_path)?;
 
-        // Process the new HTML
+        // Process the new HTML.
         process_thread(self, &thread_file_path)?;
+
+        // Download linked files.
+        download_linked_files(self);
 
         Ok(())
     }
