@@ -44,6 +44,10 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         let update_result = project.update()
             .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
+        // Save changes to disk.
+        project.save()?;
+        project.write_thread()?;
+
         // If the thread is dead, break out of loop.
         if update_result.is_dead {
             break;
@@ -64,9 +68,6 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
             std::thread::sleep(one_second);
         }
     }
-
-    project.save()?;
-    project.write_thread()?;
 
     Ok(())
 }
