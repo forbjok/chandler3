@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
@@ -22,7 +23,7 @@ pub struct LinkState {
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectState {
-    pub last_modified: Option<String>,
+    pub last_modified: Option<DateTime<Utc>>,
     pub is_dead: bool,
     pub links: LinkState,
 }

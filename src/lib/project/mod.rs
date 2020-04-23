@@ -31,15 +31,26 @@ const THREAD_FILE_NAME: &str = "thread.html";
 pub struct ChandlerProject {
     root_path: PathBuf,
     project_path: PathBuf,
+    config_file_path: PathBuf,
+    state_file_path: PathBuf,
     originals_path: PathBuf,
     config: ProjectConfig,
     state: ProjectState,
     thread: Option<Box<dyn ThreadUpdater>>,
 }
 
+#[derive(Debug)]
+pub struct UpdateResult {
+    pub was_updated: bool,
+    pub is_dead: bool,
+    pub new_post_count: i32,
+    pub new_file_count: i32,
+}
+
 pub trait Project {
-    fn update(&mut self) -> Result<(), ChandlerError>;
+    fn update(&mut self) -> Result<UpdateResult, ChandlerError>;
     fn rebuild(&mut self) -> Result<(), ChandlerError>;
+    fn save(&self) -> Result<(), ChandlerError>;
 }
 
 impl ChandlerProject {
@@ -71,14 +82,19 @@ impl ChandlerProject {
             ChandlerError::CreateProject(Cow::Owned(format!("Cannot create originals directory: {}", err)))
         })?;
 
+        let config_file_path = project_path.join(CONFIG_FILE_NAME);
+        let state_file_path = project_path.join(STATE_FILE_NAME);
+
         // Save initial project config and state
-        config.save(project_path.join(CONFIG_FILE_NAME))?;
-        state.save(project_path.join(STATE_FILE_NAME))?;
+        config.save(&config_file_path)?;
+        state.save(&state_file_path)?;
 
         Ok(ChandlerProject {
             root_path: root_path,
             project_path: project_path,
             originals_path: originals_path,
+            config_file_path,
+            state_file_path,
             config,
             state,
             thread: None,
@@ -90,9 +106,12 @@ impl ChandlerProject {
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
 
+        let config_file_path = project_path.join(CONFIG_FILE_NAME);
+        let state_file_path = project_path.join(STATE_FILE_NAME);
+
         // Load project config and state
-        let config = ProjectConfig::load(project_path.join(CONFIG_FILE_NAME))?;
-        let state = ProjectState::load(project_path.join(STATE_FILE_NAME))?;
+        let config = ProjectConfig::load(&config_file_path)?;
+        let state = ProjectState::load(&state_file_path)?;
 
         // Try to load current thread
         let thread = config.parser.create_thread_updater_from(&root_path.join(THREAD_FILE_NAME)).ok();
@@ -101,10 +120,29 @@ impl ChandlerProject {
             root_path: root_path,
             project_path: project_path,
             originals_path: originals_path,
+            config_file_path,
+            state_file_path,
             config,
             state,
             thread,
         })
+    }
+
+    pub fn load_or_create(path: impl AsRef<Path>, url: &str) -> Result<Self, ChandlerError> {
+        let root_path = path.as_ref().to_path_buf();
+        let project_path = root_path.join(PROJECT_DIR_NAME);
+
+        if project_path.exists() {
+            Self::load(path)
+        } else {
+            Self::create(path, url)
+        }
+    }
+
+    pub fn save_state(&self) -> Result<(), ChandlerError> {
+        self.state.save(&self.state_file_path)?;
+
+        Ok(())
     }
 
     pub fn write_thread(&self) -> Result<(), ChandlerError> {
@@ -117,7 +155,7 @@ impl ChandlerProject {
 }
 
 impl Project for ChandlerProject {
-    fn update(&mut self) -> Result<(), ChandlerError> {
+    fn update(&mut self) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -130,18 +168,54 @@ impl Project for ChandlerProject {
         debug!("Downloading thread from {} to file: {}", url, &filename);
 
         // Download new thread HTML.
-        download_file(url, &thread_file_path)?;
+        let result = download_file(url, &thread_file_path, self.state.last_modified)?;
 
-        // Process the new HTML.
-        process_thread(self, &thread_file_path)?;
+        match result {
+            DownloadResult::Success(last_modified) => {
+                // Update last modified timestamp.
+                self.state.last_modified = last_modified;
 
-        // Download linked files.
-        download_linked_files(self);
+                // Process the new HTML.
+                process_thread(self, &thread_file_path)?;
 
-        Ok(())
+                // Download linked files.
+                download_linked_files(self)?;
+
+                Ok(UpdateResult {
+                    was_updated: true,
+                    is_dead: self.state.is_dead,
+                    new_post_count: 0,
+                    new_file_count: 0,
+                })
+            }
+            DownloadResult::NotModified => Ok(UpdateResult {
+                was_updated: false,
+                is_dead: self.state.is_dead,
+                new_post_count: 0,
+                new_file_count: 0,
+            }),
+            DownloadResult::NotFound => {
+                // If thread returned 404, mark it as dead.
+                self.state.is_dead = true;
+
+                Ok(UpdateResult {
+                    was_updated: false,
+                    is_dead: self.state.is_dead,
+                    new_post_count: 0,
+                    new_file_count: 0,
+                })
+            }
+            DownloadResult::Error(_, description) => Err(ChandlerError::Download(Cow::Owned(description))),
+        }
     }
 
     fn rebuild(&mut self) -> Result<(), ChandlerError> {
         rebuild_thread(self)
+    }
+
+    fn save(&self) -> Result<(), ChandlerError> {
+        self.save_state()?;
+
+        Ok(())
     }
 }

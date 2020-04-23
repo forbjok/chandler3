@@ -19,13 +19,20 @@ struct Opt {
 enum Command {
     #[structopt(name = "grab", about = "Download thread")]
     Grab {
-        #[structopt(about = "URL of threads to download")]
+        #[structopt(help = "URL of threads to download")]
         url: String,
     },
     #[structopt(name = "rebuild", about = "Rebuild thread from original HTML files")]
     Rebuild {
-        #[structopt(about = "Path to project to rebuild")]
+        #[structopt(help = "Path to project to rebuild")]
         path: PathBuf,
+    },
+    #[structopt(name = "watch", about = "Watch thread")]
+    Watch {
+        #[structopt(help = "URL of thread to watch")]
+        url: String,
+        #[structopt(short = "i", long = "interval", help = "Interval (seconds)", default_value = "600")]
+        interval: i64,
     },
 }
 
@@ -51,6 +58,7 @@ fn main() {
     let cmd_result = match opt.command {
         Command::Grab { url } => command::grab(&url),
         Command::Rebuild { path } => command::rebuild(&path),
+        Command::Watch { url, interval } => command::watch(&url, interval),
     };
 
     match cmd_result {
@@ -69,7 +77,8 @@ fn initialize_logging(our_level_filter: LevelFilter) {
     use chrono::Utc;
 
     fern::Dispatch::new()
-        .level(our_level_filter)
+        .level(LevelFilter::Error)
+        .level_for("chandler", our_level_filter)
         .chain(std::io::stderr())
         .format(|out, message, record| {
             out.finish(format_args!(

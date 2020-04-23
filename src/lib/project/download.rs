@@ -1,25 +1,69 @@
 use std::fs;
 use std::path::Path;
 
-use log::{error, debug};
+use chrono::{DateTime, Utc};
+use log::debug;
 
 use crate::util;
 
 use super::*;
 
-pub fn download_file(url: &str, path: &Path) -> Result<(), ChandlerError> {
+#[derive(Debug)]
+pub enum DownloadResult {
+    Success(Option<DateTime<Utc>>),
+    NotModified,
+    NotFound,
+    Error(u16, String),
+}
+
+pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<Utc>>) -> Result<DownloadResult, ChandlerError> {
     // Create file for writing.
     let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
 
+    let client = reqwest::blocking::Client::new();
+
     // Download the thread HTML.
-    let mut response = reqwest::blocking::get(url).map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+    let mut request = client.get(url);
+
+    // If specified, add If-Modified-Since header.
+    if let Some(if_modified_since) = if_modified_since {
+        request = request.header(reqwest::header::IF_MODIFIED_SINCE, &if_modified_since.to_rfc2822());
+    }
+
+    // Send request and get response.
+    let mut response = request.send().map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+
+    let status = response.status();
+
+    dbg!(&response, &status);
+
+    if !status.is_success() {
+        let status_code: u16 = status.into();
+
+        return match status_code {
+            304 => Ok(DownloadResult::NotModified),
+            404 => Ok(DownloadResult::NotFound),
+            _ => Ok(DownloadResult::Error(status_code, status.to_string())),
+        }
+    }
 
     // Write it to the file.
     response
         .copy_to(&mut file)
         .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
 
-    Ok(())
+    let last_modified: Option<DateTime<Utc>> = if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
+        let value_str = value.to_str().unwrap();
+
+        let last_modified = DateTime::parse_from_rfc2822(value_str)
+            .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
+
+        Some(last_modified.into())
+    } else {
+        None
+    };
+
+    Ok(DownloadResult::Success(last_modified))
 }
 
 /// Download all links for this project.
@@ -28,13 +72,13 @@ pub fn download_linked_files(project: &mut ChandlerProject) -> Result<(), Chandl
     unprocessed_links.append(&mut project.state.links.unprocessed);
 
     for link_info in unprocessed_links.into_iter() {
-        error!("Downloading {} to {} ...", link_info.url, link_info.path);
+        debug!("Downloading {} to {} ...", link_info.url, link_info.path);
 
         let path = project.root_path.join(&link_info.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
 
-        if let Err(err) = download_file(&link_info.url, &path) {
-            error!("Error downloading link: {}", err.to_string());
+        if let Err(err) = download_file(&link_info.url, &path, None) {
+            debug!("Error downloading link: {}", err.to_string());
 
             project.state.links.failed.push(link_info.url.clone());
             project.state.links.unprocessed.push(link_info);
