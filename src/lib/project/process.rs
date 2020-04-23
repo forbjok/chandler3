@@ -3,10 +3,11 @@ use std::collections::HashSet;
 use url::Url;
 
 use crate::html;
+use crate::threadupdater::UpdateResult;
 
 use super::*;
 
-pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<(), ChandlerError> {
+pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<UpdateResult, ChandlerError> {
     let state = &mut project.state;
     let extensions: HashSet<String> = project.config.download_extensions.iter().cloned().collect();
 
@@ -14,7 +15,7 @@ pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) ->
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
     // If there is already a main thread...
-    let update_result = if let Some(original_thread) = project.thread.as_mut() {
+    let mut update_result = if let Some(original_thread) = project.thread.as_mut() {
         original_thread.update_from(thread_file_path)?
     } else {
         // Otherwise...
@@ -29,13 +30,13 @@ pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) ->
     };
 
     // Process new links.
-    for mut link in update_result.new_links {
-        if let Some(link_info) = process_link(&mut link, &thread_url, &extensions)? {
+    for link in update_result.new_links.iter_mut() {
+        if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
             state.links.unprocessed.push(link_info);
         }
     }
 
-    Ok(())
+    Ok(update_result)
 }
 
 fn process_link(

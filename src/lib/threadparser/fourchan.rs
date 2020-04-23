@@ -161,6 +161,10 @@ impl MergeableImageboardThread for FourchanThread {
 
         Ok(())
     }
+
+    fn is_archived(&self) -> Result<bool, ChandlerError> {
+        Ok(html::find_elements_with_classes(self.root.clone(), local_name!("img"), &["archivedIcon"]).any(|_| true))
+    }
 }
 
 #[cfg(test)]

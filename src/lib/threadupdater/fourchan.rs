@@ -29,7 +29,10 @@ impl ThreadUpdater for FourchanThreadUpdater {
             Ok(())
         })?;
 
+        let is_archived = self.thread.is_archived()?;
+
         Ok(UpdateResult {
+            is_archived,
             new_links,
         })
     }
@@ -54,7 +57,10 @@ impl ThreadUpdater for FourchanThreadUpdater {
             })?;
         }
 
+        let is_archived = new_thread.is_archived()?;
+
         Ok(UpdateResult {
+            is_archived,
             new_links,
         })
     }

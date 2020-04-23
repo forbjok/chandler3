@@ -28,4 +28,6 @@ pub trait MergeableImageboardThread: Sized {
 
     /// Purge all script tags
     fn purge_scripts(&self) -> Result<(), ChandlerError>;
+
+    fn is_archived(&self) -> Result<bool, ChandlerError>;
 }

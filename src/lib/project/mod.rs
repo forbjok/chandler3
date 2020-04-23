@@ -176,7 +176,8 @@ impl Project for ChandlerProject {
                 self.state.last_modified = last_modified;
 
                 // Process the new HTML.
-                process_thread(self, &thread_file_path)?;
+                let update_result = process_thread(self, &thread_file_path)?;
+                self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
                 download_linked_files(self)?;

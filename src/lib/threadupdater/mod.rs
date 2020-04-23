@@ -16,5 +16,6 @@ pub trait ThreadUpdater {
 }
 
 pub struct UpdateResult {
+    pub is_archived: bool,
     pub new_links: Vec<html::Link>,
 }
