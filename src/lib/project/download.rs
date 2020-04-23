@@ -17,9 +17,6 @@ pub enum DownloadResult {
 }
 
 pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<Utc>>) -> Result<DownloadResult, ChandlerError> {
-    // Create file for writing.
-    let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
-
     let client = reqwest::blocking::Client::new();
 
     // Download the thread HTML.
@@ -46,6 +43,9 @@ pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<
             _ => Ok(DownloadResult::Error(status_code, status.to_string())),
         }
     }
+
+    // Create file for writing.
+    let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
 
     // Write it to the file.
     response
