@@ -50,6 +50,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
         // If the thread is dead, break out of loop.
         if update_result.is_dead {
+            info!("Thread is dead.");
             break;
         }
 
