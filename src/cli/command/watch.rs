@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -8,6 +8,7 @@ use log::info;
 use chandler::{ChandlerProject, Project};
 
 use super::*;
+use crate::misc::pathgen;
 
 pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
     let config = crate::config::CliConfig::from_default_location()
@@ -15,7 +16,12 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         .resolve()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
 
-    let project_path = config.save_to_path.join("new_thread_placeholder");
+    let project_path = pathgen::generate_destination_path(&config, url).map_err(|err| {
+        CommandError::new(
+            CommandErrorKind::Other,
+            format!("Could not generate path for url '{}': {}", url, err),
+        )
+    })?;
 
     dbg!(&project_path);
 
@@ -34,14 +40,16 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
     ctrlc::set_handler(move || {
         info!("Cancellation requested by user.");
         break_cancel.store(true, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let mut next_update_at: DateTime<Utc>;
 
     'watch: loop {
         info!("Updating thread...");
 
-        let update_result = project.update()
+        let update_result = project
+            .update(cancel.clone())
             .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
         // Save changes to disk.

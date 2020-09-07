@@ -53,7 +53,10 @@ fn process_link(
                     // Make URL absolute.
                     let absolute_url = thread_url.join(&href).unwrap();
 
-                    return Ok(Some(LinkInfo { url: absolute_url.into_string(), path }));
+                    return Ok(Some(LinkInfo {
+                        url: absolute_url.into_string(),
+                        path,
+                    }));
                 } else {
                     return Err(ChandlerError::Other(
                         format!("Could not generate local path for url: {}", &href).into(),

@@ -129,10 +129,7 @@ impl MergeableImageboardThread for FourchanThread {
         Ok(new_posts)
     }
 
-    fn for_links(
-        &self,
-        mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
-    ) -> Result<(), ChandlerError> {
+    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
         let links = html::find_links(self.root.clone());
 
         for link in links.into_iter() {

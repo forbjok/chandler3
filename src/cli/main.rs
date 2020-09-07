@@ -5,6 +5,7 @@ use structopt::StructOpt;
 
 mod command;
 mod config;
+mod misc;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Chandler", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]

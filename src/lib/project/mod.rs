@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use chrono::Utc;
 use log::debug;
@@ -48,7 +50,7 @@ pub struct UpdateResult {
 }
 
 pub trait Project {
-    fn update(&mut self) -> Result<UpdateResult, ChandlerError>;
+    fn update(&mut self, cancel: Arc<AtomicBool>) -> Result<UpdateResult, ChandlerError>;
     fn rebuild(&mut self) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
@@ -114,7 +116,10 @@ impl ChandlerProject {
         let state = ProjectState::load(&state_file_path)?;
 
         // Try to load current thread
-        let thread = config.parser.create_thread_updater_from(&root_path.join(THREAD_FILE_NAME)).ok();
+        let thread = config
+            .parser
+            .create_thread_updater_from(&root_path.join(THREAD_FILE_NAME))
+            .ok();
 
         Ok(ChandlerProject {
             root_path: root_path,
@@ -155,7 +160,7 @@ impl ChandlerProject {
 }
 
 impl Project for ChandlerProject {
-    fn update(&mut self) -> Result<UpdateResult, ChandlerError> {
+    fn update(&mut self, cancel: Arc<AtomicBool>) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -180,7 +185,7 @@ impl Project for ChandlerProject {
                 self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
-                download_linked_files(self)?;
+                download_linked_files(self, cancel)?;
 
                 Ok(UpdateResult {
                     was_updated: true,

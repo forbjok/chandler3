@@ -1,5 +1,7 @@
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use log::debug;
@@ -16,7 +18,11 @@ pub enum DownloadResult {
     Error(u16, String),
 }
 
-pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<Utc>>) -> Result<DownloadResult, ChandlerError> {
+pub fn download_file(
+    url: &str,
+    path: &Path,
+    if_modified_since: Option<DateTime<Utc>>,
+) -> Result<DownloadResult, ChandlerError> {
     let client = reqwest::blocking::Client::new();
 
     // Download the thread HTML.
@@ -28,7 +34,9 @@ pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<
     }
 
     // Send request and get response.
-    let mut response = request.send().map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+    let mut response = request
+        .send()
+        .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
 
     let status = response.status();
 
@@ -41,7 +49,7 @@ pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<
             304 => Ok(DownloadResult::NotModified),
             404 => Ok(DownloadResult::NotFound),
             _ => Ok(DownloadResult::Error(status_code, status.to_string())),
-        }
+        };
     }
 
     // Create file for writing.
@@ -52,26 +60,38 @@ pub fn download_file(url: &str, path: &Path, if_modified_since: Option<DateTime<
         .copy_to(&mut file)
         .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
 
-    let last_modified: Option<DateTime<Utc>> = if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
-        let value_str = value.to_str().unwrap();
+    let last_modified: Option<DateTime<Utc>> =
+        if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
+            let value_str = value.to_str().unwrap();
 
-        let last_modified = DateTime::parse_from_rfc2822(value_str)
-            .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
+            let last_modified = DateTime::parse_from_rfc2822(value_str)
+                .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
 
-        Some(last_modified.into())
-    } else {
-        None
-    };
+            Some(last_modified.into())
+        } else {
+            None
+        };
 
     Ok(DownloadResult::Success(last_modified))
 }
 
 /// Download all links for this project.
-pub fn download_linked_files(project: &mut ChandlerProject) -> Result<(), ChandlerError> {
+pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBool>) -> Result<(), ChandlerError> {
     let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
     unprocessed_links.append(&mut project.state.links.unprocessed);
 
-    for link_info in unprocessed_links.into_iter() {
+    loop {
+        // If cancellation has been requested, break out immediately.
+        if cancel.load(Ordering::SeqCst) {
+            break;
+        }
+
+        if unprocessed_links.is_empty() {
+            break;
+        }
+
+        let link_info = unprocessed_links.remove(0);
+
         debug!("Downloading {} to {} ...", link_info.url, link_info.path);
 
         let path = project.root_path.join(&link_info.path);
@@ -84,6 +104,8 @@ pub fn download_linked_files(project: &mut ChandlerProject) -> Result<(), Chandl
             project.state.links.unprocessed.push(link_info);
         }
     }
+
+    project.state.links.unprocessed.append(&mut unprocessed_links);
 
     Ok(())
 }

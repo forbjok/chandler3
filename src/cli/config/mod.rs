@@ -15,7 +15,6 @@ pub const CONFIG_FILENAME: &str = "config.toml";
 lazy_static! {
     static ref DEFAULT_CONFIG_DIR_PATH: PathBuf = dirs::config_dir().unwrap().join(CONFIG_DIR);
     static ref DEFAULT_CONFIG_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(CONFIG_FILENAME);
-
     static ref DEFAULT_SAVE_TO_PATH: PathBuf = dirs::download_dir().unwrap().join("chandler3");
 }
 
@@ -49,13 +48,12 @@ impl CliConfig {
     }
 
     pub fn resolve(self) -> Result<ResolvedCliConfig, String> {
-        let save_to_path = self.save_to_path
+        let save_to_path = self
+            .save_to_path
             .map(|p| util::normalize_path(p))
             .unwrap_or_else(|| (*DEFAULT_SAVE_TO_PATH).clone());
 
-        Ok(ResolvedCliConfig {
-            save_to_path,
-        })
+        Ok(ResolvedCliConfig { save_to_path })
     }
 }
 

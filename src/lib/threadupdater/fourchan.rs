@@ -1,5 +1,5 @@
-use crate::threadparser::MergeableImageboardThread;
 use crate::threadparser::fourchan::FourchanThread;
+use crate::threadparser::MergeableImageboardThread;
 
 use super::*;
 
@@ -31,10 +31,7 @@ impl ThreadUpdater for FourchanThreadUpdater {
 
         let is_archived = self.thread.is_archived()?;
 
-        Ok(UpdateResult {
-            is_archived,
-            new_links,
-        })
+        Ok(UpdateResult { is_archived, new_links })
     }
 
     fn update_from(&mut self, path: &Path) -> Result<UpdateResult, ChandlerError> {
@@ -59,10 +56,7 @@ impl ThreadUpdater for FourchanThreadUpdater {
 
         let is_archived = new_thread.is_archived()?;
 
-        Ok(UpdateResult {
-            is_archived,
-            new_links,
-        })
+        Ok(UpdateResult { is_archived, new_links })
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
