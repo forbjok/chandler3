@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use log::debug;
 use serde_derive::Serialize;
 
 use chandler::{ChandlerProject, Project};
@@ -19,7 +20,7 @@ pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     project.rebuild()?;
 
     let result = serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap();
-    dbg!(result);
+    debug!("Result: {:#?}", result);
 
     Ok(())
 }

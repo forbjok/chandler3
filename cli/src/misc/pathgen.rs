@@ -18,8 +18,6 @@ pub fn generate_destination_path(cfg: &ResolvedCliConfig, url: &str) -> Result<P
     let board = &cap[2];
     let thread = &cap[3];
 
-    dbg!(host, board, thread);
-
     let path = cfg.save_to_path.join(host).join(board).join(thread);
 
     Ok(path)

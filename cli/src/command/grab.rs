@@ -5,6 +5,8 @@ use log::info;
 
 use chandler::{ChandlerProject, Project};
 
+use crate::misc::pathgen;
+
 use super::*;
 
 pub fn grab(url: &str) -> Result<(), CommandError> {
@@ -13,9 +15,14 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
         .resolve()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
 
-    let project_path = config.save_to_path.join("new_thread_placeholder");
+    let project_path = pathgen::generate_destination_path(&config, url).map_err(|err| {
+        CommandError::new(
+            CommandErrorKind::Other,
+            format!("Could not generate path for url '{}': {}", url, err),
+        )
+    })?;
 
-    dbg!(&project_path);
+    info!("Project path: {}", project_path.display());
 
     let mut project = ChandlerProject::load_or_create(project_path, url)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;

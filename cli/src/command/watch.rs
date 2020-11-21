@@ -7,8 +7,9 @@ use log::info;
 
 use chandler::{ChandlerProject, Project};
 
-use super::*;
 use crate::misc::pathgen;
+
+use super::*;
 
 pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
     let config = crate::config::CliConfig::from_default_location()
@@ -23,7 +24,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         )
     })?;
 
-    dbg!(&project_path);
+    info!("Project path: {}", project_path.display());
 
     let mut project = ChandlerProject::load_or_create(project_path, url)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;

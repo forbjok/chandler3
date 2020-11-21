@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use log::debug;
+use log::{debug, warn};
 
 pub struct PidLock {
     path: PathBuf,
@@ -47,7 +47,7 @@ impl PidLock {
 
 impl Drop for PidLock {
     fn drop(&mut self) {
-        dbg!(&self.path);
+        debug!("Dropping PID-lock at {}", self.path.display());
         fs::remove_file(&self.path).unwrap();
     }
 }
@@ -92,6 +92,6 @@ fn process_exists(pid: u32) -> bool {
 
 #[cfg(not(windows))]
 fn process_exists(pid: u32) -> bool {
-    dbg!("PidLock not implemented for this OS!");
+    warn!("PidLock not implemented for this OS!");
     false
 }

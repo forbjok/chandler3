@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use log::debug;
+use log::{debug, info};
 
 use crate::util;
 
@@ -23,6 +23,8 @@ pub fn download_file(
     path: &Path,
     if_modified_since: Option<DateTime<Utc>>,
 ) -> Result<DownloadResult, ChandlerError> {
+    info!("Download starting: '{}' (to '{}')", url, path.display());
+
     let client = reqwest::blocking::Client::builder()
         .user_agent("Chandler3")
         .build()
@@ -43,10 +45,10 @@ pub fn download_file(
 
     let status = response.status();
 
-    dbg!(&response, &status);
-
     if !status.is_success() {
         let status_code: u16 = status.into();
+
+        info!("Download failed: '{}' (status code: {})", url, status_code);
 
         return match status_code {
             304 => Ok(DownloadResult::NotModified),
@@ -75,6 +77,7 @@ pub fn download_file(
             None
         };
 
+    info!("Download completed: '{}'", url);
     Ok(DownloadResult::Success(last_modified))
 }
 
@@ -94,8 +97,6 @@ pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBo
         }
 
         let link_info = unprocessed_links.remove(0);
-
-        debug!("Downloading {} to {} ...", link_info.url, link_info.path);
 
         let path = project.root_path.join(&link_info.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();

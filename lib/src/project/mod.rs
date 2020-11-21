@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use chrono::Utc;
-use log::debug;
+use log::{debug, info};
 
 mod config;
 mod download;
@@ -151,8 +151,11 @@ impl ChandlerProject {
     }
 
     pub fn write_thread(&self) -> Result<(), ChandlerError> {
+        let thread_file_path = self.root_path.join(THREAD_FILE_NAME);
+        info!("Writing thread HTML: {}", thread_file_path.display());
+
         if let Some(thread) = self.thread.as_ref() {
-            thread.write_file(&self.root_path.join(THREAD_FILE_NAME))?;
+            thread.write_file(&thread_file_path)?;
         }
 
         Ok(())
@@ -170,12 +173,13 @@ impl Project for ChandlerProject {
         let thread_file_path = self.originals_path.join(&filename);
 
         let url = &self.config.url;
-        debug!("Downloading thread from {} to file: {}", url, &filename);
+
+        info!("BEGIN UPDATE: {}", url);
 
         // Download new thread HTML.
         let result = download_file(url, &thread_file_path, self.state.last_modified)?;
 
-        match result {
+        let result = match result {
             DownloadResult::Success(last_modified) => {
                 // Update last modified timestamp.
                 self.state.last_modified = last_modified;
@@ -212,7 +216,11 @@ impl Project for ChandlerProject {
                 })
             }
             DownloadResult::Error(_, description) => Err(ChandlerError::Download(Cow::Owned(description))),
-        }
+        };
+
+        info!("END UPDATE");
+
+        result
     }
 
     fn rebuild(&mut self) -> Result<(), ChandlerError> {
