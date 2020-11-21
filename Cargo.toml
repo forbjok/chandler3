@@ -1,39 +1,10 @@
-[package]
-name = "chandler"
-version = "3.0.0"
-authors = ["Forb.Jok <forbjok@gmail.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-path = "src/lib/lib.rs"
-
-# CLI tool binary
-[[bin]]
-name = "chandler"
-path = "src/cli/main.rs"
-
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 3
 
-[dependencies]
-chrono = { version = "0.4.19", features = ["serde"] }
-ctrlc = "3.1.7"
-dirs = "3.0.1"
-fern = "0.6.0"
-html5ever = "0.25.1"
-kuchiki = "0.8.1"
-lazy_static = "1.4.0"
-log = "0.4.11"
-regex = "1.4.2"
-reqwest = { version = "0.10.9", features = ["blocking"] }
-serde = "1.0.117"
-serde_derive = "1.0.117"
-serde_json = "1.0.59"
-structopt = "0.3.20"
-toml = "0.5.7"
-url = "2.2.0"
-winapi = "0.3.9"
+[workspace]
+members = [
+  "cli",
+  "lib",
+]
