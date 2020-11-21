@@ -23,7 +23,10 @@ pub fn download_file(
     path: &Path,
     if_modified_since: Option<DateTime<Utc>>,
 ) -> Result<DownloadResult, ChandlerError> {
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Chandler3")
+        .build()
+        .unwrap();
 
     // Download the thread HTML.
     let mut request = client.get(url);
