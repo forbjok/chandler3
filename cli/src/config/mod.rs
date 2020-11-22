@@ -1,9 +1,7 @@
-use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use dirs;
 use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
@@ -50,7 +48,7 @@ impl CliConfig {
     pub fn resolve(self) -> Result<ResolvedCliConfig, String> {
         let save_to_path = self
             .save_to_path
-            .map(|p| util::normalize_path(p))
+            .map(util::normalize_path)
             .unwrap_or_else(|| (*DEFAULT_SAVE_TO_PATH).clone());
 
         Ok(ResolvedCliConfig { save_to_path })

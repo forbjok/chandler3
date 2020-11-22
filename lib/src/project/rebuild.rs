@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use crate::error::*;
-use crate::threadparser::*;
 use crate::ui::*;
 
 use super::*;

@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use log::{debug, warn};
+use log::debug;
 
 pub struct PidLock {
     path: PathBuf,

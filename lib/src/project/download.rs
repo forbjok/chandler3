@@ -1,7 +1,5 @@
 use std::fs;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use log::{debug, info};
