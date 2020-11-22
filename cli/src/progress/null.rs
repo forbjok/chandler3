@@ -9,6 +9,5 @@ impl NullProgressHandler {
 }
 
 impl ChandlerProgressCallbackHandler for NullProgressHandler {
-    fn progress(&mut self, _: &ProgressEvent) {
-    }
+    fn progress(&mut self, _: &ProgressEvent) {}
 }

@@ -6,8 +6,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use log::{debug, info};
 
-use crate::util;
 use crate::progress::*;
+use crate::util;
 
 use super::*;
 
@@ -28,15 +28,15 @@ pub fn download_file(
     info!("Download starting: '{}' (to '{}')", url, path.display());
 
     progress_callback_handler.progress(&ProgressEvent::DownloadFileStart {
-        url : url.to_owned(),
+        url: url.to_owned(),
         destination: path.to_path_buf(),
     });
 
     let result = (|| {
         let client = reqwest::blocking::Client::builder()
-        .user_agent("Chandler3")
-        .build()
-        .unwrap();
+            .user_agent("Chandler3")
+            .build()
+            .unwrap();
 
         // Download the thread HTML.
         let mut request = client.get(url);
@@ -69,9 +69,7 @@ pub fn download_file(
             size: response.content_length(),
         });
 
-        progress_callback_handler.progress(&ProgressEvent::DownloadFileProgress {
-            bytes_downloaded: 0,
-        });
+        progress_callback_handler.progress(&ProgressEvent::DownloadFileProgress { bytes_downloaded: 0 });
 
         // Create file for writing.
         let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
@@ -95,7 +93,8 @@ pub fn download_file(
                         bytes_downloaded: bytes_downloaded as u64,
                     });
 
-                    file.write(&buf[..bytes_read]).map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+                    file.write(&buf[..bytes_read])
+                        .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
                 }
                 Err(err) => return Err(ChandlerError::Download(err.to_string().into())),
             }
@@ -119,20 +118,30 @@ pub fn download_file(
 
     // Report download complete progress event.
     match result {
-        Ok(_) => progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Success)),
-        Err(_) => progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Error)),
+        Ok(_) => {
+            progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Success))
+        }
+        Err(_) => {
+            progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Error))
+        }
     };
 
     result
 }
 
 /// Download all links for this project.
-pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<(), ChandlerError> {
+pub fn download_linked_files(
+    project: &mut ChandlerProject,
+    cancel: Arc<AtomicBool>,
+    progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+) -> Result<(), ChandlerError> {
     let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
     unprocessed_links.append(&mut project.state.links.unprocessed);
 
     // Report download start.
-    progress_callback_handler.progress(&ProgressEvent::DownloadStart { file_count: unprocessed_links.len() as u32 });
+    progress_callback_handler.progress(&ProgressEvent::DownloadStart {
+        file_count: unprocessed_links.len() as u32,
+    });
 
     let mut files_processed: u32 = 0;
     let mut files_downloaded: u32 = 0;
@@ -173,7 +182,10 @@ pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBo
     project.state.links.unprocessed.append(&mut unprocessed_links);
 
     // Report download complete.
-    progress_callback_handler.progress(&ProgressEvent::DownloadComplete { files_downloaded, files_failed });
+    progress_callback_handler.progress(&ProgressEvent::DownloadComplete {
+        files_downloaded,
+        files_failed,
+    });
 
     Ok(())
 }

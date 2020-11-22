@@ -19,8 +19,7 @@ const ONE_SECOND: Duration = Duration::from_secs(1);
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar()
-        .template(" {prefix} {pos} {wide_msg}");
+    static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}");
 }
 
 pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {

@@ -51,7 +51,11 @@ pub struct UpdateResult {
 }
 
 pub trait Project {
-    fn update(&mut self, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<UpdateResult, ChandlerError>;
+    fn update(
+        &mut self,
+        cancel: Arc<AtomicBool>,
+        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ) -> Result<UpdateResult, ChandlerError>;
     fn rebuild(&mut self) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
@@ -164,7 +168,11 @@ impl ChandlerProject {
 }
 
 impl Project for ChandlerProject {
-    fn update(&mut self, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<UpdateResult, ChandlerError> {
+    fn update(
+        &mut self,
+        cancel: Arc<AtomicBool>,
+        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -178,7 +186,12 @@ impl Project for ChandlerProject {
         info!("BEGIN UPDATE: {}", url);
 
         // Download new thread HTML.
-        let result = download_file(url, &thread_file_path, self.state.last_modified, progress_callback_handler)?;
+        let result = download_file(
+            url,
+            &thread_file_path,
+            self.state.last_modified,
+            progress_callback_handler,
+        )?;
 
         let result = match result {
             DownloadResult::Success(last_modified) => {
