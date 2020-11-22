@@ -20,7 +20,7 @@ impl ThreadUpdater for FourchanThreadUpdater {
         // Purge all script tags from the thread HTML.
         self.thread.purge_scripts()?;
 
-        let new_post_count = self.thread.get_all_posts().iter().count() as u32;
+        let new_post_count = self.thread.get_all_posts().map_or(0, |iter| iter.count()) as u32;
 
         let mut new_links: Vec<html::Link> = Vec::new();
 
