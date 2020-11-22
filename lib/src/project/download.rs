@@ -11,6 +11,8 @@ use crate::util;
 
 use super::*;
 
+const BUF_SIZE: usize = 65535;
+
 #[derive(Debug)]
 pub enum DownloadResult {
     Success(Option<DateTime<Utc>>),
@@ -80,7 +82,7 @@ pub fn download_file(
         'copy: loop {
             use std::io::{Read, Write};
 
-            let mut buf: [u8; 1024] = [0; 1024];
+            let mut buf: [u8; BUF_SIZE] = [0; BUF_SIZE];
 
             match response.read(&mut buf) {
                 Ok(bytes_read) => {
