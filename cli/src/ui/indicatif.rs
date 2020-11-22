@@ -16,14 +16,18 @@ lazy_static! {
 }
 
 pub struct IndicatifUiHandler {
+    cancel_check: Box<dyn Fn() -> bool>,
+
     overall_download_bar: Option<ProgressBar>,
     file_download_bar: Option<ProgressBar>,
     rebuild_bar: Option<ProgressBar>,
 }
 
 impl IndicatifUiHandler {
-    pub fn new() -> Self {
+    pub fn new(cancel_check: Box<dyn Fn() -> bool>) -> Self {
         Self {
+            cancel_check,
+
             overall_download_bar: None,
             file_download_bar: None,
             rebuild_bar: None,
@@ -109,5 +113,9 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 }
             }
         }
+    }
+
+    fn is_cancelled(&self) -> bool {
+        (self.cancel_check)()
     }
 }

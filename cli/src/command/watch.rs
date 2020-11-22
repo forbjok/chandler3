@@ -1,6 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -56,7 +55,15 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_duration = chrono::Duration::seconds(interval);
 
-    let mut progress_handler = IndicatifUiHandler::new();
+    let ui_cancel = cancel.clone();
+    let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {
+        // If cancellation has been requested, break out immediately.
+        if ui_cancel.load(Ordering::SeqCst) {
+            return true;
+        }
+
+        false
+    }));
 
     let mut next_update_at: DateTime<Utc>;
 
@@ -64,7 +71,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         println!("Updating thread... ");
 
         let update_result = project
-            .update(cancel.clone(), &mut progress_handler)
+            .update(&mut ui_handler)
             .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
         // Save changes to disk.

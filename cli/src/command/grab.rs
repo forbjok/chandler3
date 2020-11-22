@@ -40,8 +40,17 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {
+        // If cancellation has been requested, break out immediately.
+        if cancel.load(Ordering::SeqCst) {
+            return true;
+        }
+
+        false
+    }));
+
     project
-        .update(cancel, &mut NullUiHandler::new())
+        .update(&mut ui_handler)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     project.save()?;

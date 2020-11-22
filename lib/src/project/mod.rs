@@ -15,8 +15,8 @@ mod rebuild;
 mod state;
 
 use crate::error::*;
-use crate::ui::*;
 use crate::threadupdater::*;
+use crate::ui::*;
 
 use self::config::*;
 use self::download::*;
@@ -51,15 +51,8 @@ pub struct UpdateResult {
 }
 
 pub trait Project {
-    fn update(
-        &mut self,
-        cancel: Arc<AtomicBool>,
-        ui_handler: &mut dyn ChandlerUiHandler,
-    ) -> Result<UpdateResult, ChandlerError>;
-    fn rebuild(
-        &mut self,
-        ui_handler: &mut dyn ChandlerUiHandler,
-    ) -> Result<(), ChandlerError>;
+    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<UpdateResult, ChandlerError>;
+    fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
 
@@ -171,11 +164,7 @@ impl ChandlerProject {
 }
 
 impl Project for ChandlerProject {
-    fn update(
-        &mut self,
-        cancel: Arc<AtomicBool>,
-        ui_handler: &mut dyn ChandlerUiHandler,
-    ) -> Result<UpdateResult, ChandlerError> {
+    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -189,12 +178,7 @@ impl Project for ChandlerProject {
         info!("BEGIN UPDATE: {}", url);
 
         // Download new thread HTML.
-        let result = download_file(
-            url,
-            &thread_file_path,
-            self.state.last_modified,
-            ui_handler,
-        )?;
+        let result = download_file(url, &thread_file_path, self.state.last_modified, ui_handler)?;
 
         let result = match result {
             DownloadResult::Success(last_modified) => {
@@ -206,7 +190,7 @@ impl Project for ChandlerProject {
                 self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
-                download_linked_files(self, cancel, ui_handler)?;
+                download_linked_files(self, ui_handler)?;
 
                 Ok(UpdateResult {
                     was_updated: true,
@@ -240,10 +224,7 @@ impl Project for ChandlerProject {
         result
     }
 
-    fn rebuild(
-        &mut self,
-        ui_handler: &mut dyn ChandlerUiHandler,
-    ) -> Result<(), ChandlerError> {
+    fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
         rebuild_thread(self, ui_handler)
     }
 

@@ -19,9 +19,9 @@ pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     // Try to load Chandler project
     let mut project = ChandlerProject::load(&path)?;
 
-    let mut progress_handler = IndicatifUiHandler::new();
+    let mut ui_handler = IndicatifUiHandler::new(Box::new(|| false));
 
-    project.rebuild(&mut progress_handler)?;
+    project.rebuild(&mut ui_handler)?;
 
     let result = serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap();
     debug!("Result: {:#?}", result);

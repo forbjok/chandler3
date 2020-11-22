@@ -10,4 +10,7 @@ impl NullUiHandler {
 
 impl ChandlerUiHandler for NullUiHandler {
     fn event(&mut self, _: &UiEvent) {}
+    fn is_cancelled(&self) -> bool {
+        false
+    }
 }

@@ -120,12 +120,8 @@ pub fn download_file(
 
     // Report download complete progress event.
     match result {
-        Ok(_) => {
-            ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Success))
-        }
-        Err(_) => {
-            ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Error))
-        }
+        Ok(_) => ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Success)),
+        Err(_) => ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Error)),
     };
 
     result
@@ -134,7 +130,6 @@ pub fn download_file(
 /// Download all links for this project.
 pub fn download_linked_files(
     project: &mut ChandlerProject,
-    cancel: Arc<AtomicBool>,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
     let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
@@ -151,7 +146,7 @@ pub fn download_linked_files(
 
     loop {
         // If cancellation has been requested, break out immediately.
-        if cancel.load(Ordering::SeqCst) {
+        if ui_handler.is_cancelled() {
             break;
         }
 
