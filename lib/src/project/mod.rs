@@ -184,7 +184,7 @@ impl Project for ChandlerProject {
         let result = download_file(url, &thread_file_path, self.state.last_modified, ui_handler)?;
 
         let result = match result {
-            DownloadResult::Success(last_modified) => {
+            DownloadResult::Success { last_modified } => {
                 // Update last modified timestamp.
                 self.state.last_modified = last_modified;
 
@@ -221,7 +221,13 @@ impl Project for ChandlerProject {
                     new_file_count: 0,
                 })
             }
-            DownloadResult::Error(_, description) => Err(ChandlerError::Download(Cow::Owned(description))),
+            DownloadResult::Error {
+                status_code,
+                description,
+            } => Err(ChandlerError::DownloadHttpStatus {
+                status_code,
+                description: description.into(),
+            }),
         };
 
         info!("END UPDATE");

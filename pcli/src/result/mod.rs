@@ -67,6 +67,13 @@ impl From<ChandlerError> for PcliError {
                 code: 10011,
                 description: err.to_string(),
             },
+            ChandlerError::DownloadHttpStatus {
+                status_code,
+                description,
+            } => PcliError {
+                code: 10012,
+                description: format!("Download HTTP error: {} {}", status_code, description),
+            },
             ChandlerError::Other(err) => PcliError {
                 code: 10000,
                 description: err.to_string(),

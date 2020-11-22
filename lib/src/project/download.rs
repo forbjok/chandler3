@@ -13,10 +13,10 @@ const BUF_SIZE: usize = 65535;
 
 #[derive(Debug)]
 pub enum DownloadResult {
-    Success(Option<DateTime<Utc>>),
+    Success { last_modified: Option<DateTime<Utc>> },
     NotModified,
     NotFound,
-    Error(u16, String),
+    Error { status_code: u16, description: String },
 }
 
 pub fn download_file(
@@ -61,7 +61,10 @@ pub fn download_file(
             return match status_code {
                 304 => Ok(DownloadResult::NotModified),
                 404 => Ok(DownloadResult::NotFound),
-                _ => Ok(DownloadResult::Error(status_code, status.to_string())),
+                _ => Ok(DownloadResult::Error {
+                    status_code,
+                    description: status.to_string(),
+                }),
             };
         }
 
@@ -113,7 +116,7 @@ pub fn download_file(
             };
 
         info!("Download completed: '{}'", url);
-        Ok(DownloadResult::Success(last_modified))
+        Ok(DownloadResult::Success { last_modified })
     })();
 
     // Report download complete progress event.

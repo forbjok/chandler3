@@ -17,6 +17,10 @@ pub enum ChandlerError {
     ReadFile(io::Error),
     WriteFile(io::Error),
     Download(Cow<'static, str>),
+    DownloadHttpStatus {
+        status_code: u16,
+        description: Cow<'static, str>,
+    },
     Other(Cow<'static, str>),
 }
 
@@ -34,6 +38,10 @@ impl fmt::Display for ChandlerError {
             Self::ReadFile(err) => write!(f, "{}", err),
             Self::WriteFile(err) => write!(f, "{}", err),
             Self::Download(err) => write!(f, "{}", err),
+            Self::DownloadHttpStatus {
+                status_code,
+                description,
+            } => write!(f, "{} {}", status_code, description),
             Self::Other(err) => write!(f, "{}", err),
         }
     }

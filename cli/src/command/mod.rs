@@ -82,6 +82,13 @@ impl From<ChandlerError> for CommandError {
                 CommandError::new(CommandErrorKind::Config, format!("Error writing file: {}", err))
             }
             ChandlerError::Download(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
+            ChandlerError::DownloadHttpStatus {
+                status_code,
+                description,
+            } => CommandError::new(
+                CommandErrorKind::Other,
+                format!("HTTP error: {} {}", status_code, description),
+            ),
             ChandlerError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
         }
     }
