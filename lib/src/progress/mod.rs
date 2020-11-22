@@ -1,22 +1,6 @@
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct DownloadStartInfo {
-    pub url: String,
-    pub destination: PathBuf,
-}
-
-#[derive(Debug)]
-pub struct DownloadFileInfo {
-    pub size: Option<u64>,
-}
-
-#[derive(Debug)]
-pub struct DownloadProgressInfo {
-    pub bytes_downloaded: u64,
-}
-
-#[derive(Debug)]
 pub enum DownloadCompleteResult {
     Success,
     NotModified,
@@ -24,16 +8,18 @@ pub enum DownloadCompleteResult {
 }
 
 #[derive(Debug)]
-pub struct DownloadCompleteInfo {
-    pub result: DownloadCompleteResult,
-}
-
-#[derive(Debug)]
 pub enum ProgressEvent {
-    DownloadStart(DownloadStartInfo),
-    DownloadFileInfo(DownloadFileInfo),
-    DownloadProgress(DownloadProgressInfo),
-    DownloadComplete(DownloadCompleteInfo),
+    DownloadStart { file_count: u32 },
+    DownloadProgress { files_processed: u32 },
+    DownloadComplete { files_downloaded: u32, files_failed: u32 },
+
+    DownloadFileStart { url: String, destination: PathBuf },
+    DownloadFileInfo { size: Option<u64> },
+    DownloadFileProgress { bytes_downloaded: u64 },
+    DownloadFileComplete(DownloadCompleteResult),
+
+    UpdateStart { thread_url: String, destination: PathBuf },
+    UpdateComplete { new_post_count: i32 },
 }
 
 pub trait ChandlerProgressCallbackHandler {

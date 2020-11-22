@@ -4,11 +4,10 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use indicatif::MultiProgress;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use log::info;
 
 use chandler::{ChandlerProject, Project};
-use chandler::progress::ProgressEvent;
 
 use crate::misc::pathgen;
 use crate::progress::IndicatifProgressHandler;
@@ -16,6 +15,13 @@ use crate::progress::IndicatifProgressHandler;
 use super::*;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar()
+        .template(" {prefix} {pos} {wide_msg}");
+}
 
 pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
     let config = crate::config::CliConfig::from_default_location()
@@ -46,6 +52,14 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
 
     let multi_progress = MultiProgress::new();
+
+    let interval_seconds = interval as u64;
+
+    let waiting_bar = multi_progress.add(ProgressBar::new(interval_seconds));
+    waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
+    waiting_bar.set_prefix("Waiting");
+    waiting_bar.set_message("seconds until update...");
+
     let mut progress_handler = IndicatifProgressHandler::new(&multi_progress);
 
     let url = url.to_owned();
@@ -55,12 +69,12 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         let mut project = ChandlerProject::load_or_create(project_path, &url)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
-        let interval = chrono::Duration::seconds(interval);
+        let interval_duration = chrono::Duration::seconds(interval);
 
         let mut next_update_at: DateTime<Utc>;
 
         'watch: loop {
-            info!("Updating thread...");
+            println!("Updating thread...");
 
             let update_result = project
                 .update(cancel.clone(), &mut progress_handler)
@@ -72,14 +86,20 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
             // If the thread is dead, break out of loop.
             if update_result.is_dead {
-                info!("Thread is dead.");
+                println!("Thread is dead.");
                 break;
             }
 
             // Calculate next update time.
-            next_update_at = Utc::now() + interval;
+            next_update_at = Utc::now() + interval_duration;
 
             info!("Next update at {}.", next_update_at);
+
+            let mut seconds_passed: u64 = 0;
+
+            // Reset waiting progress.
+            waiting_bar.reset_elapsed();
+            waiting_bar.set_position(interval_seconds);
 
             // Wait for until it's time for the next update.
             while Utc::now() < next_update_at {
@@ -89,6 +109,10 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
                 }
 
                 std::thread::sleep(ONE_SECOND);
+
+                // Update waiting progress.
+                seconds_passed += 1;
+                waiting_bar.set_position(interval_seconds - seconds_passed);
             }
         }
 
