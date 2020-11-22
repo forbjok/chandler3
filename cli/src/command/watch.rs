@@ -4,13 +4,13 @@ use std::thread;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 
 use chandler::{ChandlerProject, Project};
 
 use crate::misc::pathgen;
-use crate::progress::IndicatifProgressHandler;
+use crate::ui::*;
 
 use super::*;
 
@@ -56,7 +56,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_duration = chrono::Duration::seconds(interval);
 
-    let mut progress_handler = IndicatifProgressHandler::new();
+    let mut progress_handler = IndicatifUiHandler::new();
 
     let mut next_update_at: DateTime<Utc>;
 

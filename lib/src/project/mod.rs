@@ -15,7 +15,7 @@ mod rebuild;
 mod state;
 
 use crate::error::*;
-use crate::progress::ChandlerProgressCallbackHandler;
+use crate::ui::*;
 use crate::threadupdater::*;
 
 use self::config::*;
@@ -54,11 +54,11 @@ pub trait Project {
     fn update(
         &mut self,
         cancel: Arc<AtomicBool>,
-        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+        ui_handler: &mut dyn ChandlerUiHandler,
     ) -> Result<UpdateResult, ChandlerError>;
     fn rebuild(
         &mut self,
-        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+        ui_handler: &mut dyn ChandlerUiHandler,
     ) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
@@ -174,7 +174,7 @@ impl Project for ChandlerProject {
     fn update(
         &mut self,
         cancel: Arc<AtomicBool>,
-        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+        ui_handler: &mut dyn ChandlerUiHandler,
     ) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
@@ -193,7 +193,7 @@ impl Project for ChandlerProject {
             url,
             &thread_file_path,
             self.state.last_modified,
-            progress_callback_handler,
+            ui_handler,
         )?;
 
         let result = match result {
@@ -206,7 +206,7 @@ impl Project for ChandlerProject {
                 self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
-                download_linked_files(self, cancel, progress_callback_handler)?;
+                download_linked_files(self, cancel, ui_handler)?;
 
                 Ok(UpdateResult {
                     was_updated: true,
@@ -242,9 +242,9 @@ impl Project for ChandlerProject {
 
     fn rebuild(
         &mut self,
-        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+        ui_handler: &mut dyn ChandlerUiHandler,
     ) -> Result<(), ChandlerError> {
-        rebuild_thread(self, progress_callback_handler)
+        rebuild_thread(self, ui_handler)
     }
 
     fn save(&self) -> Result<(), ChandlerError> {

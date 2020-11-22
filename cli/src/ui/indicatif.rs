@@ -1,8 +1,8 @@
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use lazy_static::lazy_static;
 
-use chandler::progress::{ChandlerProgressCallbackHandler, ProgressEvent};
+use chandler::ui::*;
 
 lazy_static! {
     static ref OVERALL_DOWNLOAD_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar()
@@ -15,13 +15,13 @@ lazy_static! {
         ProgressStyle::default_spinner().template(" {prefix:>8} {bytes}/? {wide_msg}");
 }
 
-pub struct IndicatifProgressHandler {
+pub struct IndicatifUiHandler {
     overall_download_bar: Option<ProgressBar>,
     file_download_bar: Option<ProgressBar>,
     rebuild_bar: Option<ProgressBar>,
 }
 
-impl IndicatifProgressHandler {
+impl IndicatifUiHandler {
     pub fn new() -> Self {
         Self {
             overall_download_bar: None,
@@ -31,10 +31,10 @@ impl IndicatifProgressHandler {
     }
 }
 
-impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
-    fn progress(&mut self, e: &ProgressEvent) {
+impl ChandlerUiHandler for IndicatifUiHandler {
+    fn event(&mut self, e: &UiEvent) {
         match e {
-            ProgressEvent::DownloadStart { file_count } => {
+            UiEvent::DownloadStart { file_count } => {
                 let bar = ProgressBar::new(*file_count as u64).with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
 
                 bar.set_prefix("Overall");
@@ -42,12 +42,12 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
 
                 self.overall_download_bar = Some(bar);
             }
-            ProgressEvent::DownloadProgress { files_processed } => {
+            UiEvent::DownloadProgress { files_processed } => {
                 if let Some(bar) = &self.overall_download_bar {
                     bar.set_position(*files_processed as u64);
                 }
             }
-            ProgressEvent::DownloadComplete {
+            UiEvent::DownloadComplete {
                 files_downloaded,
                 files_failed,
             } => {
@@ -59,14 +59,14 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
                     bar.finish_and_clear();
                 }
             }
-            ProgressEvent::DownloadFileStart { url, .. } => {
+            UiEvent::DownloadFileStart { url, .. } => {
                 let bar = ProgressBar::new(0).with_style((*DOWNLOAD_SPINNER_STYLE).clone());
                 bar.set_prefix("Download");
                 bar.set_message(&url);
 
                 self.file_download_bar = Some(bar);
             }
-            ProgressEvent::DownloadFileInfo { size } => {
+            UiEvent::DownloadFileInfo { size } => {
                 if let Some(bar) = &self.file_download_bar {
                     if let Some(size) = *size {
                         bar.set_style((*DOWNLOAD_BAR_STYLE).clone());
@@ -74,21 +74,21 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
                     }
                 }
             }
-            ProgressEvent::DownloadFileProgress { bytes_downloaded } => {
+            UiEvent::DownloadFileProgress { bytes_downloaded } => {
                 if let Some(bar) = &self.file_download_bar {
                     bar.set_position(*bytes_downloaded);
                 }
             }
-            ProgressEvent::DownloadFileComplete(_) => {
+            UiEvent::DownloadFileComplete(_) => {
                 if let Some(bar) = &self.file_download_bar.take() {
                     bar.finish_and_clear();
                 }
             }
 
-            ProgressEvent::UpdateStart { .. } => {}
-            ProgressEvent::UpdateComplete { .. } => {}
+            UiEvent::UpdateStart { .. } => {}
+            UiEvent::UpdateComplete { .. } => {}
 
-            ProgressEvent::RebuildStart { path, file_count } => {
+            UiEvent::RebuildStart { path, file_count } => {
                 println!("Rebuilding project at {}...", path.display());
 
                 let bar = ProgressBar::new(*file_count as u64).with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
@@ -97,12 +97,12 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
 
                 self.rebuild_bar = Some(bar);
             }
-            ProgressEvent::RebuildProgress { files_processed } => {
+            UiEvent::RebuildProgress { files_processed } => {
                 if let Some(bar) = &self.rebuild_bar {
                     bar.set_position(*files_processed as u64);
                 }
             }
-            ProgressEvent::RebuildComplete => {
+            UiEvent::RebuildComplete => {
                 if let Some(bar) = &self.rebuild_bar.take() {
                     bar.println("Rebuild finished.");
                     bar.finish_and_clear();

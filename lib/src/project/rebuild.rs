@@ -1,20 +1,20 @@
 use std::borrow::Cow;
 
 use crate::error::*;
-use crate::progress::*;
+use crate::ui::*;
 use crate::threadparser::*;
 
 use super::*;
 
 pub fn rebuild_thread(
     project: &mut ChandlerProject,
-    progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
     let files = get_html_files(&project.originals_path)
         .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
 
     // Report rebuild start.
-    progress_callback_handler.progress(&ProgressEvent::RebuildStart {
+    ui_handler.event(&UiEvent::RebuildStart {
         path: project.root_path.clone(),
         file_count: files.len() as u32,
     });
@@ -32,13 +32,13 @@ pub fn rebuild_thread(
 
         // Report progress.
         files_processed += 1;
-        progress_callback_handler.progress(&ProgressEvent::RebuildProgress { files_processed });
+        ui_handler.event(&UiEvent::RebuildProgress { files_processed });
     }
 
     project.write_thread()?;
 
     // Report rebuild complete.
-    progress_callback_handler.progress(&ProgressEvent::RebuildComplete);
+    ui_handler.event(&UiEvent::RebuildComplete);
 
     Ok(())
 }

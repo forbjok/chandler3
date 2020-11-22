@@ -6,7 +6,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use log::{debug, info};
 
-use crate::progress::*;
+use crate::ui::*;
 use crate::util;
 
 use super::*;
@@ -25,11 +25,11 @@ pub fn download_file(
     url: &str,
     path: &Path,
     if_modified_since: Option<DateTime<Utc>>,
-    progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<DownloadResult, ChandlerError> {
     info!("Download starting: '{}' (to '{}')", url, path.display());
 
-    progress_callback_handler.progress(&ProgressEvent::DownloadFileStart {
+    ui_handler.event(&UiEvent::DownloadFileStart {
         url: url.to_owned(),
         destination: path.to_path_buf(),
     });
@@ -67,11 +67,11 @@ pub fn download_file(
             };
         }
 
-        progress_callback_handler.progress(&ProgressEvent::DownloadFileInfo {
+        ui_handler.event(&UiEvent::DownloadFileInfo {
             size: response.content_length(),
         });
 
-        progress_callback_handler.progress(&ProgressEvent::DownloadFileProgress { bytes_downloaded: 0 });
+        ui_handler.event(&UiEvent::DownloadFileProgress { bytes_downloaded: 0 });
 
         // Create file for writing.
         let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
@@ -91,7 +91,7 @@ pub fn download_file(
                     }
                     bytes_downloaded += bytes_read;
 
-                    progress_callback_handler.progress(&ProgressEvent::DownloadFileProgress {
+                    ui_handler.event(&UiEvent::DownloadFileProgress {
                         bytes_downloaded: bytes_downloaded as u64,
                     });
 
@@ -121,10 +121,10 @@ pub fn download_file(
     // Report download complete progress event.
     match result {
         Ok(_) => {
-            progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Success))
+            ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Success))
         }
         Err(_) => {
-            progress_callback_handler.progress(&ProgressEvent::DownloadFileComplete(DownloadCompleteResult::Error))
+            ui_handler.event(&UiEvent::DownloadFileComplete(DownloadFileCompleteResult::Error))
         }
     };
 
@@ -135,13 +135,13 @@ pub fn download_file(
 pub fn download_linked_files(
     project: &mut ChandlerProject,
     cancel: Arc<AtomicBool>,
-    progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
     let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
     unprocessed_links.append(&mut project.state.links.unprocessed);
 
     // Report download start.
-    progress_callback_handler.progress(&ProgressEvent::DownloadStart {
+    ui_handler.event(&UiEvent::DownloadStart {
         file_count: unprocessed_links.len() as u32,
     });
 
@@ -164,7 +164,7 @@ pub fn download_linked_files(
         let path = project.root_path.join(&link_info.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
 
-        if let Err(err) = download_file(&link_info.url, &path, None, progress_callback_handler) {
+        if let Err(err) = download_file(&link_info.url, &path, None, ui_handler) {
             debug!("Error downloading link: {}", err.to_string());
 
             project.state.links.failed.push(link_info.url.clone());
@@ -178,13 +178,13 @@ pub fn download_linked_files(
         files_processed += 1;
 
         // Report download progress.
-        progress_callback_handler.progress(&ProgressEvent::DownloadProgress { files_processed });
+        ui_handler.event(&UiEvent::DownloadProgress { files_processed });
     }
 
     project.state.links.unprocessed.append(&mut unprocessed_links);
 
     // Report download complete.
-    progress_callback_handler.progress(&ProgressEvent::DownloadComplete {
+    ui_handler.event(&UiEvent::DownloadComplete {
         files_downloaded,
         files_failed,
     });

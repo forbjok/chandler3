@@ -5,7 +5,7 @@ use serde_derive::Serialize;
 
 use chandler::{ChandlerProject, Project};
 
-use crate::progress::IndicatifProgressHandler;
+use crate::ui::*;
 
 use super::*;
 
@@ -19,7 +19,7 @@ pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     // Try to load Chandler project
     let mut project = ChandlerProject::load(&path)?;
 
-    let mut progress_handler = IndicatifProgressHandler::new();
+    let mut progress_handler = IndicatifUiHandler::new();
 
     project.rebuild(&mut progress_handler)?;
 
