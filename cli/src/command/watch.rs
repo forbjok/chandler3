@@ -55,71 +55,61 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_seconds = interval as u64;
 
-    let waiting_bar = multi_progress.add(ProgressBar::new(interval_seconds));
-    waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
-    waiting_bar.set_prefix("Waiting");
-    waiting_bar.set_message("seconds until update...");
+    let mut project = ChandlerProject::load_or_create(project_path, &url)
+        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+
+    let interval_duration = chrono::Duration::seconds(interval);
+
+    let mut next_update_at: DateTime<Utc>;
 
     let mut progress_handler = IndicatifProgressHandler::new(&multi_progress);
 
-    let url = url.to_owned();
+    'watch: loop {
+        println!("Updating thread...");
 
-    // Spawn watcher thread
-    let result = thread::spawn(move || {
-        let mut project = ChandlerProject::load_or_create(project_path, &url)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+        let update_result = project
+            .update(cancel.clone(), &mut progress_handler)
+            .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
-        let interval_duration = chrono::Duration::seconds(interval);
+        // Save changes to disk.
+        project.save()?;
+        project.write_thread()?;
 
-        let mut next_update_at: DateTime<Utc>;
-
-        'watch: loop {
-            println!("Updating thread...");
-
-            let update_result = project
-                .update(cancel.clone(), &mut progress_handler)
-                .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
-
-            // Save changes to disk.
-            project.save()?;
-            project.write_thread()?;
-
-            // If the thread is dead, break out of loop.
-            if update_result.is_dead {
-                println!("Thread is dead.");
-                break;
-            }
-
-            // Calculate next update time.
-            next_update_at = Utc::now() + interval_duration;
-
-            info!("Next update at {}.", next_update_at);
-
-            let mut seconds_passed: u64 = 0;
-
-            // Reset waiting progress.
-            waiting_bar.reset_elapsed();
-            waiting_bar.set_position(interval_seconds);
-
-            // Wait for until it's time for the next update.
-            while Utc::now() < next_update_at {
-                // If cancellation has been requested, break out immediately.
-                if cancel.load(Ordering::SeqCst) {
-                    break 'watch;
-                }
-
-                std::thread::sleep(ONE_SECOND);
-
-                // Update waiting progress.
-                seconds_passed += 1;
-                waiting_bar.set_position(interval_seconds - seconds_passed);
-            }
+        // If the thread is dead, break out of loop.
+        if update_result.is_dead {
+            println!("Thread is dead.");
+            break;
         }
 
-        Ok(())
-    });
+        // Calculate next update time.
+        next_update_at = Utc::now() + interval_duration;
+
+        info!("Next update at {}.", next_update_at);
+
+        let mut seconds_passed: u64 = 0;
+
+        let waiting_bar = multi_progress.add(ProgressBar::new(interval_seconds));
+        waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
+        waiting_bar.set_prefix("Waiting");
+        waiting_bar.set_message("seconds until update...");
+        waiting_bar.set_position(interval_seconds);
+
+        // Wait for until it's time for the next update.
+        while Utc::now() < next_update_at {
+            // If cancellation has been requested, break out immediately.
+            if cancel.load(Ordering::SeqCst) {
+                break 'watch;
+            }
+
+            std::thread::sleep(ONE_SECOND);
+
+            // Update waiting progress.
+            seconds_passed += 1;
+            waiting_bar.set_position(interval_seconds - seconds_passed);
+        }
+    }
 
     multi_progress.join().unwrap();
 
-    result.join().unwrap()
+    Ok(())
 }

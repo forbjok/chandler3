@@ -17,57 +17,67 @@ lazy_static! {
         .template(" {prefix:>8} {spinner} {bytes} {wide_msg}");
 }
 
-pub struct IndicatifProgressHandler {
-    overall_download_bar: ProgressBar,
-    file_download_bar: ProgressBar,
+pub struct IndicatifProgressHandler<'a> {
+    multi_progress: &'a MultiProgress,
+    overall_download_bar: Option<ProgressBar>,
+    file_download_bar: Option<ProgressBar>,
 }
 
-impl IndicatifProgressHandler {
-    pub fn new(multi_progress: &MultiProgress) -> Self {
-        let overall_download_bar = multi_progress.add(ProgressBar::new(0))
-            .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
-        overall_download_bar.set_prefix("Overall");
-        overall_download_bar.set_message("files downloaded...");
-
-        let file_download_bar = multi_progress.add(ProgressBar::new(0));
-        file_download_bar.set_prefix("Download");
-
+impl<'a> IndicatifProgressHandler<'a> {
+    pub fn new(multi_progress: &'a MultiProgress) -> Self {
         Self {
-            overall_download_bar,
-            file_download_bar,
+            multi_progress,
+            overall_download_bar: None,
+            file_download_bar: None,
         }
     }
 }
 
-impl ChandlerProgressCallbackHandler for IndicatifProgressHandler {
+impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler<'a> {
     fn progress(&mut self, e: &ProgressEvent) {
         match e {
             ProgressEvent::DownloadStart { file_count } => {
-                self.overall_download_bar.set_length(*file_count as u64);
-                self.overall_download_bar.set_position(0);
+                let bar = self.multi_progress.add(ProgressBar::new(*file_count as u64))
+                    .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
+
+                bar.set_prefix("Overall");
+                bar.set_message("files downloaded...");
             },
             ProgressEvent::DownloadProgress { files_processed } => {
-                self.overall_download_bar.set_position(*files_processed as u64);
+                if let Some(bar) = &self.overall_download_bar {
+                    bar.set_position(*files_processed as u64);
+                }
             },
-            ProgressEvent::DownloadComplete { .. } => { },
+            ProgressEvent::DownloadComplete { .. } => {
+                if let Some(bar) = self.overall_download_bar.take() {
+                    bar.finish_and_clear();
+                }
+            },
             ProgressEvent::DownloadFileStart { url, .. } => {
-                let bar = &self.file_download_bar;
+                let bar = self.multi_progress.add(ProgressBar::new(0)
+                    .with_style((*DOWNLOAD_SPINNER_STYLE).clone()));
 
-                bar.set_style((*DOWNLOAD_SPINNER_STYLE).clone());
+                bar.set_prefix("Download");
                 bar.set_message(&url);
             },
             ProgressEvent::DownloadFileInfo { size } => {
-                let bar = &self.file_download_bar;
-
-                if let Some(size) = *size {
-                    bar.set_style((*DOWNLOAD_BAR_STYLE).clone());
-                    bar.set_length(size);
+                if let Some(bar) = &self.file_download_bar {
+                    if let Some(size) = *size {
+                        bar.set_style((*DOWNLOAD_BAR_STYLE).clone());
+                        bar.set_length(size);
+                    }
                 }
             },
             ProgressEvent::DownloadFileProgress { bytes_downloaded } => {
-                self.file_download_bar.set_position(*bytes_downloaded);
+                if let Some(bar) = &self.file_download_bar {
+                    bar.set_position(*bytes_downloaded);
+                }
             },
-            ProgressEvent::DownloadFileComplete(_) => self.file_download_bar.set_style((*DOWNLOAD_SPINNER_STYLE).clone()),
+            ProgressEvent::DownloadFileComplete(_) => {
+                if let Some(bar) = &self.file_download_bar.take() {
+                    bar.finish_with_message("download completed.");
+                }
+            },
 
             ProgressEvent::UpdateStart { .. } => { },
             ProgressEvent::UpdateComplete { .. } => { },
