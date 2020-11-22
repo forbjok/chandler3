@@ -13,6 +13,8 @@ pub struct PcliError {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(tag = "result", content = "data")]
+#[serde(rename_all = "lowercase")]
 pub enum PcliResult<T> {
     Success(T),
     Error(PcliError),
