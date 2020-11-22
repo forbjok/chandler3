@@ -105,6 +105,8 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
             seconds_passed += 1;
             waiting_bar.set_position(interval_seconds - seconds_passed);
         }
+
+        waiting_bar.finish_and_clear();
     }
 
     Ok(())

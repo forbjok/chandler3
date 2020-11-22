@@ -52,7 +52,6 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
             }
             ProgressEvent::DownloadFileStart { url, .. } => {
                 let bar = ProgressBar::new(0).with_style((*DOWNLOAD_SPINNER_STYLE).clone());
-
                 bar.set_prefix("Download");
                 bar.set_message(&url);
 
