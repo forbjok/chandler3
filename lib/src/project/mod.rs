@@ -189,7 +189,9 @@ impl Project for ChandlerProject {
                 self.state.last_modified = last_modified;
 
                 // Process the new HTML.
-                let update_result = process_thread(self, &thread_file_path)?;
+                let process_result = process_thread(self, &thread_file_path)?;
+                let update_result = process_result.update_result;
+
                 self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
@@ -199,7 +201,7 @@ impl Project for ChandlerProject {
                     was_updated: true,
                     is_dead: self.state.is_dead,
                     new_post_count: update_result.new_post_count,
-                    new_file_count: update_result.new_links.len() as u32,
+                    new_file_count: process_result.new_file_count,
                 })
             }
             DownloadResult::NotModified => Ok(UpdateResult {

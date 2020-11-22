@@ -7,7 +7,12 @@ use crate::threadupdater::UpdateResult;
 
 use super::*;
 
-pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<UpdateResult, ChandlerError> {
+pub struct ProcessResult {
+    pub update_result: UpdateResult,
+    pub new_file_count: u32,
+}
+
+pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<ProcessResult, ChandlerError> {
     let state = &mut project.state;
     let extensions: HashSet<String> = project.config.download_extensions.iter().cloned().collect();
 
@@ -29,14 +34,21 @@ pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) ->
         update_result
     };
 
+    let mut new_file_count: u32 = 0;
+
     // Process new links.
     for link in update_result.new_links.iter_mut() {
         if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
             state.links.unprocessed.push(link_info);
+
+            new_file_count += 1;
         }
     }
 
-    Ok(update_result)
+    Ok(ProcessResult {
+        update_result,
+        new_file_count,
+    })
 }
 
 fn process_link(
