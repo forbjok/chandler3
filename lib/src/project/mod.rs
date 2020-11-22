@@ -15,6 +15,7 @@ mod rebuild;
 mod state;
 
 use crate::error::*;
+use crate::progress::ChandlerProgressCallbackHandler;
 use crate::threadupdater::*;
 
 use self::config::*;
@@ -50,7 +51,7 @@ pub struct UpdateResult {
 }
 
 pub trait Project {
-    fn update(&mut self, cancel: Arc<AtomicBool>) -> Result<UpdateResult, ChandlerError>;
+    fn update(&mut self, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<UpdateResult, ChandlerError>;
     fn rebuild(&mut self) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
@@ -163,7 +164,7 @@ impl ChandlerProject {
 }
 
 impl Project for ChandlerProject {
-    fn update(&mut self, cancel: Arc<AtomicBool>) -> Result<UpdateResult, ChandlerError> {
+    fn update(&mut self, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<UpdateResult, ChandlerError> {
         // Get unix timestamp
         let now = Utc::now();
         let unix_now = now.timestamp();
@@ -177,7 +178,7 @@ impl Project for ChandlerProject {
         info!("BEGIN UPDATE: {}", url);
 
         // Download new thread HTML.
-        let result = download_file(url, &thread_file_path, self.state.last_modified)?;
+        let result = download_file(url, &thread_file_path, self.state.last_modified, progress_callback_handler)?;
 
         let result = match result {
             DownloadResult::Success(last_modified) => {
@@ -189,7 +190,7 @@ impl Project for ChandlerProject {
                 self.state.is_dead = update_result.is_archived;
 
                 // Download linked files.
-                download_linked_files(self, cancel)?;
+                download_linked_files(self, cancel, progress_callback_handler)?;
 
                 Ok(UpdateResult {
                     was_updated: true,

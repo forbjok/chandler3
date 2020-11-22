@@ -6,6 +6,7 @@ use log::info;
 use chandler::{ChandlerProject, Project};
 
 use crate::misc::pathgen;
+use crate::progress::NullProgressHandler;
 
 use super::*;
 
@@ -40,7 +41,7 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
     .expect("Error setting Ctrl-C handler");
 
     project
-        .update(cancel)
+        .update(cancel, &mut NullProgressHandler::new())
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     project.save()?;

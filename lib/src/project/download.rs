@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use log::{debug, info};
 
 use crate::util;
+use crate::progress::*;
 
 use super::*;
 
@@ -22,67 +23,115 @@ pub fn download_file(
     url: &str,
     path: &Path,
     if_modified_since: Option<DateTime<Utc>>,
+    progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
 ) -> Result<DownloadResult, ChandlerError> {
     info!("Download starting: '{}' (to '{}')", url, path.display());
 
-    let client = reqwest::blocking::Client::builder()
+    progress_callback_handler.progress(&ProgressEvent::DownloadStart(DownloadStartInfo {
+        url : url.to_owned(),
+        destination: path.to_path_buf(),
+    }));
+
+    let result = (|| {
+        let client = reqwest::blocking::Client::builder()
         .user_agent("Chandler3")
         .build()
         .unwrap();
 
-    // Download the thread HTML.
-    let mut request = client.get(url);
+        // Download the thread HTML.
+        let mut request = client.get(url);
 
-    // If specified, add If-Modified-Since header.
-    if let Some(if_modified_since) = if_modified_since {
-        request = request.header(reqwest::header::IF_MODIFIED_SINCE, &if_modified_since.to_rfc2822());
-    }
+        // If specified, add If-Modified-Since header.
+        if let Some(if_modified_since) = if_modified_since {
+            request = request.header(reqwest::header::IF_MODIFIED_SINCE, &if_modified_since.to_rfc2822());
+        }
 
-    // Send request and get response.
-    let mut response = request
-        .send()
-        .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+        // Send request and get response.
+        let mut response = request
+            .send()
+            .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
 
-    let status = response.status();
+        let status = response.status();
 
-    if !status.is_success() {
-        let status_code: u16 = status.into();
+        if !status.is_success() {
+            let status_code: u16 = status.into();
 
-        info!("Download failed: '{}' (status code: {})", url, status_code);
+            info!("Download failed: '{}' (status code: {})", url, status_code);
 
-        return match status_code {
-            304 => Ok(DownloadResult::NotModified),
-            404 => Ok(DownloadResult::NotFound),
-            _ => Ok(DownloadResult::Error(status_code, status.to_string())),
-        };
-    }
+            return match status_code {
+                304 => Ok(DownloadResult::NotModified),
+                404 => Ok(DownloadResult::NotFound),
+                _ => Ok(DownloadResult::Error(status_code, status.to_string())),
+            };
+        }
 
-    // Create file for writing.
-    let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
+        progress_callback_handler.progress(&ProgressEvent::DownloadFileInfo(DownloadFileInfo {
+            size: response.content_length(),
+        }));
 
-    // Write it to the file.
-    response
-        .copy_to(&mut file)
-        .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
+        progress_callback_handler.progress(&ProgressEvent::DownloadProgress(DownloadProgressInfo {
+            bytes_downloaded: 0,
+        }));
 
-    let last_modified: Option<DateTime<Utc>> =
-        if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
-            let value_str = value.to_str().unwrap();
+        // Create file for writing.
+        let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
 
-            let last_modified = DateTime::parse_from_rfc2822(value_str)
-                .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
+        let mut bytes_downloaded: usize = 0;
 
-            Some(last_modified.into())
-        } else {
-            None
-        };
+        // Copy response content to file.
+        'copy: loop {
+            use std::io::{Read, Write};
 
-    info!("Download completed: '{}'", url);
-    Ok(DownloadResult::Success(last_modified))
+            let mut buf: [u8; 1024] = [0; 1024];
+
+            match response.read(&mut buf) {
+                Ok(bytes_read) => {
+                    if bytes_read == 0 {
+                        break 'copy;
+                    }
+                    bytes_downloaded += bytes_read;
+
+                    progress_callback_handler.progress(&ProgressEvent::DownloadProgress(DownloadProgressInfo {
+                        bytes_downloaded: bytes_downloaded as u64,
+                    }));
+
+                    file.write(&buf[..bytes_read]).map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+                }
+                Err(err) => return Err(ChandlerError::Download(err.to_string().into())),
+            }
+        }
+
+        let last_modified: Option<DateTime<Utc>> =
+            if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
+                let value_str = value.to_str().unwrap();
+
+                let last_modified = DateTime::parse_from_rfc2822(value_str)
+                    .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
+
+                Some(last_modified.into())
+            } else {
+                None
+            };
+
+        info!("Download completed: '{}'", url);
+        Ok(DownloadResult::Success(last_modified))
+    })();
+
+    // Report download complete progress event.
+    match result {
+        Ok(_) => progress_callback_handler.progress(&ProgressEvent::DownloadComplete(DownloadCompleteInfo {
+            result: DownloadCompleteResult::Success,
+        })),
+        Err(_) => progress_callback_handler.progress(&ProgressEvent::DownloadComplete(DownloadCompleteInfo {
+            result: DownloadCompleteResult::Error,
+        })),
+    };
+
+    result
 }
 
 /// Download all links for this project.
-pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBool>) -> Result<(), ChandlerError> {
+pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBool>, progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler) -> Result<(), ChandlerError> {
     let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
     unprocessed_links.append(&mut project.state.links.unprocessed);
 
@@ -101,7 +150,7 @@ pub fn download_linked_files(project: &mut ChandlerProject, cancel: Arc<AtomicBo
         let path = project.root_path.join(&link_info.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
 
-        if let Err(err) = download_file(&link_info.url, &path, None) {
+        if let Err(err) = download_file(&link_info.url, &path, None, progress_callback_handler) {
             debug!("Error downloading link: {}", err.to_string());
 
             project.state.links.failed.push(link_info.url.clone());
