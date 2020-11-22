@@ -5,6 +5,8 @@ use serde_derive::Serialize;
 
 use chandler::{ChandlerProject, Project};
 
+use crate::progress::IndicatifProgressHandler;
+
 use super::*;
 
 pub fn rebuild(path: &Path) -> Result<(), CommandError> {
@@ -17,7 +19,9 @@ pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     // Try to load Chandler project
     let mut project = ChandlerProject::load(&path)?;
 
-    project.rebuild()?;
+    let mut progress_handler = IndicatifProgressHandler::new();
+
+    project.rebuild(&mut progress_handler)?;
 
     let result = serde_json::to_string(&RebuildResult { input_file_count: 1 }).unwrap();
     debug!("Result: {:#?}", result);

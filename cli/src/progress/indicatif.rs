@@ -18,6 +18,7 @@ lazy_static! {
 pub struct IndicatifProgressHandler {
     overall_download_bar: Option<ProgressBar>,
     file_download_bar: Option<ProgressBar>,
+    rebuild_bar: Option<ProgressBar>,
 }
 
 impl IndicatifProgressHandler {
@@ -25,6 +26,7 @@ impl IndicatifProgressHandler {
         Self {
             overall_download_bar: None,
             file_download_bar: None,
+            rebuild_bar: None,
         }
     }
 }
@@ -45,8 +47,15 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
                     bar.set_position(*files_processed as u64);
                 }
             }
-            ProgressEvent::DownloadComplete { .. } => {
+            ProgressEvent::DownloadComplete {
+                files_downloaded,
+                files_failed,
+            } => {
                 if let Some(bar) = self.overall_download_bar.take() {
+                    bar.println(format!(
+                        "Download finished. {} files downloaded, {} files failed.",
+                        files_downloaded, files_failed
+                    ));
                     bar.finish_and_clear();
                 }
             }
@@ -78,6 +87,27 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
 
             ProgressEvent::UpdateStart { .. } => {}
             ProgressEvent::UpdateComplete { .. } => {}
+
+            ProgressEvent::RebuildStart { path, file_count } => {
+                println!("Rebuilding project at {}...", path.display());
+
+                let bar = ProgressBar::new(*file_count as u64).with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
+
+                bar.set_prefix("Rebuild");
+
+                self.rebuild_bar = Some(bar);
+            }
+            ProgressEvent::RebuildProgress { files_processed } => {
+                if let Some(bar) = &self.rebuild_bar {
+                    bar.set_position(*files_processed as u64);
+                }
+            }
+            ProgressEvent::RebuildComplete => {
+                if let Some(bar) = &self.rebuild_bar.take() {
+                    bar.println("Rebuild finished.");
+                    bar.finish_and_clear();
+                }
+            }
         }
     }
 }

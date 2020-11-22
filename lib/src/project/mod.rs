@@ -56,7 +56,10 @@ pub trait Project {
         cancel: Arc<AtomicBool>,
         progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
     ) -> Result<UpdateResult, ChandlerError>;
-    fn rebuild(&mut self) -> Result<(), ChandlerError>;
+    fn rebuild(
+        &mut self,
+        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
 
@@ -237,8 +240,11 @@ impl Project for ChandlerProject {
         result
     }
 
-    fn rebuild(&mut self) -> Result<(), ChandlerError> {
-        rebuild_thread(self)
+    fn rebuild(
+        &mut self,
+        progress_callback_handler: &mut dyn ChandlerProgressCallbackHandler,
+    ) -> Result<(), ChandlerError> {
+        rebuild_thread(self, progress_callback_handler)
     }
 
     fn save(&self) -> Result<(), ChandlerError> {

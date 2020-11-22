@@ -20,6 +20,10 @@ pub enum ProgressEvent {
 
     UpdateStart { thread_url: String, destination: PathBuf },
     UpdateComplete { new_post_count: i32 },
+
+    RebuildStart { path: PathBuf, file_count: u32 },
+    RebuildProgress { files_processed: u32 },
+    RebuildComplete,
 }
 
 pub trait ChandlerProgressCallbackHandler {
