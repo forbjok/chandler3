@@ -50,9 +50,6 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
     })
     .expect("Error setting Ctrl-C handler");
 
-
-    let multi_progress = MultiProgress::new();
-
     let interval_seconds = interval as u64;
 
     let mut project = ChandlerProject::load_or_create(project_path, &url)
@@ -60,12 +57,12 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_duration = chrono::Duration::seconds(interval);
 
+    let mut progress_handler = IndicatifProgressHandler::new();
+
     let mut next_update_at: DateTime<Utc>;
 
-    let mut progress_handler = IndicatifProgressHandler::new(&multi_progress);
-
     'watch: loop {
-        println!("Updating thread...");
+        println!("Updating thread... ");
 
         let update_result = project
             .update(cancel.clone(), &mut progress_handler)
@@ -74,6 +71,8 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         // Save changes to disk.
         project.save()?;
         project.write_thread()?;
+
+        println!("Update finished.");
 
         // If the thread is dead, break out of loop.
         if update_result.is_dead {
@@ -88,7 +87,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
         let mut seconds_passed: u64 = 0;
 
-        let waiting_bar = multi_progress.add(ProgressBar::new(interval_seconds));
+        let waiting_bar = ProgressBar::new(interval_seconds);
         waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
         waiting_bar.set_prefix("Waiting");
         waiting_bar.set_message("seconds until update...");
@@ -108,8 +107,6 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
             waiting_bar.set_position(interval_seconds - seconds_passed);
         }
     }
-
-    multi_progress.join().unwrap();
 
     Ok(())
 }

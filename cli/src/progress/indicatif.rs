@@ -14,34 +14,34 @@ lazy_static! {
         .progress_chars("##-");
 
     static ref DOWNLOAD_SPINNER_STYLE: ProgressStyle = ProgressStyle::default_spinner()
-        .template(" {prefix:>8} {spinner} {bytes} {wide_msg}");
+        .template(" {prefix:>8} {bytes}/? {wide_msg}");
 }
 
-pub struct IndicatifProgressHandler<'a> {
-    multi_progress: &'a MultiProgress,
+pub struct IndicatifProgressHandler {
     overall_download_bar: Option<ProgressBar>,
     file_download_bar: Option<ProgressBar>,
 }
 
-impl<'a> IndicatifProgressHandler<'a> {
-    pub fn new(multi_progress: &'a MultiProgress) -> Self {
+impl IndicatifProgressHandler {
+    pub fn new() -> Self {
         Self {
-            multi_progress,
             overall_download_bar: None,
             file_download_bar: None,
         }
     }
 }
 
-impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler<'a> {
+impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler {
     fn progress(&mut self, e: &ProgressEvent) {
         match e {
             ProgressEvent::DownloadStart { file_count } => {
-                let bar = self.multi_progress.add(ProgressBar::new(*file_count as u64))
+                let bar = ProgressBar::new(*file_count as u64)
                     .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
 
                 bar.set_prefix("Overall");
                 bar.set_message("files downloaded...");
+
+                self.overall_download_bar = Some(bar);
             },
             ProgressEvent::DownloadProgress { files_processed } => {
                 if let Some(bar) = &self.overall_download_bar {
@@ -54,11 +54,13 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler<'a> {
                 }
             },
             ProgressEvent::DownloadFileStart { url, .. } => {
-                let bar = self.multi_progress.add(ProgressBar::new(0)
-                    .with_style((*DOWNLOAD_SPINNER_STYLE).clone()));
+                let bar = ProgressBar::new(0)
+                    .with_style((*DOWNLOAD_SPINNER_STYLE).clone());
 
                 bar.set_prefix("Download");
                 bar.set_message(&url);
+
+                self.file_download_bar = Some(bar);
             },
             ProgressEvent::DownloadFileInfo { size } => {
                 if let Some(bar) = &self.file_download_bar {
@@ -75,7 +77,7 @@ impl<'a> ChandlerProgressCallbackHandler for IndicatifProgressHandler<'a> {
             },
             ProgressEvent::DownloadFileComplete(_) => {
                 if let Some(bar) = &self.file_download_bar.take() {
-                    bar.finish_with_message("download completed.");
+                    bar.finish_and_clear();
                 }
             },
 
