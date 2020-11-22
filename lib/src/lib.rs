@@ -7,4 +7,4 @@ pub mod ui;
 pub mod util;
 
 pub use self::error::*;
-pub use self::project::{ChandlerProject, Project};
+pub use self::project::{ChandlerProject, Project, UpdateResult};

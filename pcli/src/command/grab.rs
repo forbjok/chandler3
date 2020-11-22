@@ -4,7 +4,7 @@ use std::path::Path;
 use log::info;
 
 use chandler::util;
-use chandler::{ChandlerProject, Project};
+use chandler::{ChandlerProject, Project, UpdateResult};
 
 use crate::result::*;
 use crate::ui::*;
@@ -16,32 +16,25 @@ pub fn grab(url: &str, destination: &Path) -> Result<(), CommandError> {
 
     info!("Project path: {}", project_path.display());
 
-    let mut project = ChandlerProject::load_or_create(&project_path, url)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+    let result = (|| -> Result<UpdateResult, PcliError> {
+        let mut project = ChandlerProject::load_or_create(&project_path, url)?;
 
-    let mut ui_handler = StderrUiHandler::new();
+        let mut ui_handler = StderrUiHandler::new();
 
-    let update_result = project
-        .update(&mut ui_handler)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+        let update_result = project.update(&mut ui_handler)?;
 
-    project.save()?;
-    project.write_thread()?;
+        project.save()?;
+        project.write_thread()?;
+
+        Ok(update_result)
+    })();
+
+    let pcli_result: PcliResult<PcliUpdateResult> = result.into();
 
     let stdout = io::stdout();
 
-    serde_json::to_writer_pretty(
-        stdout,
-        &PcliUpdateResult {
-            url: url.to_owned(),
-            destination_path: project_path,
-            was_updated: update_result.was_updated,
-            is_dead: update_result.is_dead,
-            new_post_count: update_result.new_post_count,
-            new_file_count: update_result.new_file_count,
-        },
-    )
-    .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+    serde_json::to_writer_pretty(stdout, &pcli_result)
+        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     Ok(())
 }
