@@ -46,8 +46,8 @@ pub struct ChandlerProject {
 pub struct UpdateResult {
     pub was_updated: bool,
     pub is_dead: bool,
-    pub new_post_count: i32,
-    pub new_file_count: i32,
+    pub new_post_count: u32,
+    pub new_file_count: u32,
 }
 
 pub trait Project {
@@ -177,6 +177,11 @@ impl Project for ChandlerProject {
 
         info!("BEGIN UPDATE: {}", url);
 
+        ui_handler.event(&UiEvent::UpdateStart {
+            thread_url: url.clone(),
+            destination: self.root_path.clone(),
+        });
+
         // Download new thread HTML.
         let result = download_file(url, &thread_file_path, self.state.last_modified, ui_handler)?;
 
@@ -195,8 +200,8 @@ impl Project for ChandlerProject {
                 Ok(UpdateResult {
                     was_updated: true,
                     is_dead: self.state.is_dead,
-                    new_post_count: 0,
-                    new_file_count: 0,
+                    new_post_count: update_result.new_post_count,
+                    new_file_count: update_result.new_links.len() as u32,
                 })
             }
             DownloadResult::NotModified => Ok(UpdateResult {
@@ -220,6 +225,14 @@ impl Project for ChandlerProject {
         };
 
         info!("END UPDATE");
+
+        if let Ok(result) = &result {
+            ui_handler.event(&UiEvent::UpdateComplete {
+                was_updated: result.was_updated,
+                new_post_count: result.new_post_count,
+                new_file_count: result.new_file_count,
+            });
+        }
 
         result
     }

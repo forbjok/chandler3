@@ -89,8 +89,23 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 }
             }
 
-            UiEvent::UpdateStart { .. } => {}
-            UiEvent::UpdateComplete { .. } => {}
+            UiEvent::UpdateStart { thread_url, .. } => {
+                eprintln!("Updating thread from {}...", thread_url);
+            }
+            UiEvent::UpdateComplete {
+                was_updated,
+                new_post_count,
+                new_file_count,
+            } => {
+                if *was_updated {
+                    eprintln!(
+                        "Update finished. {} new posts, {} new files.",
+                        new_post_count, new_file_count
+                    );
+                } else {
+                    eprintln!("Thread not changed.");
+                }
+            }
 
             UiEvent::RebuildStart { path, file_count } => {
                 println!("Rebuilding project at {}...", path.display());

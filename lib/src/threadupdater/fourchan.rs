@@ -20,6 +20,8 @@ impl ThreadUpdater for FourchanThreadUpdater {
         // Purge all script tags from the thread HTML.
         self.thread.purge_scripts()?;
 
+        let new_post_count = self.thread.get_all_posts().iter().count() as u32;
+
         let mut new_links: Vec<html::Link> = Vec::new();
 
         // Process all links in the new thread.
@@ -31,7 +33,11 @@ impl ThreadUpdater for FourchanThreadUpdater {
 
         let is_archived = self.thread.is_archived()?;
 
-        Ok(UpdateResult { is_archived, new_links })
+        Ok(UpdateResult {
+            is_archived,
+            new_post_count,
+            new_links,
+        })
     }
 
     fn update_from(&mut self, path: &Path) -> Result<UpdateResult, ChandlerError> {
@@ -42,6 +48,7 @@ impl ThreadUpdater for FourchanThreadUpdater {
 
         // Merge posts from new thread into the main thread.
         let new_posts = thread.merge_posts_from(&new_thread)?;
+        let new_post_count = new_posts.len() as u32;
 
         let mut new_links: Vec<html::Link> = Vec::new();
 
@@ -56,7 +63,11 @@ impl ThreadUpdater for FourchanThreadUpdater {
 
         let is_archived = new_thread.is_archived()?;
 
-        Ok(UpdateResult { is_archived, new_links })
+        Ok(UpdateResult {
+            is_archived,
+            new_post_count,
+            new_links,
+        })
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
