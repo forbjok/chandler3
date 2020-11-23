@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
 use serde_derive::Serialize;
 
-use chandler::project::UpdateResult;
+use chandler::project::ProjectUpdateResult;
 
 #[derive(Debug, Serialize)]
 pub struct PcliUpdateResult {
@@ -12,8 +10,8 @@ pub struct PcliUpdateResult {
     pub new_file_count: u32,
 }
 
-impl From<UpdateResult> for PcliUpdateResult {
-    fn from(ur: UpdateResult) -> Self {
+impl From<ProjectUpdateResult> for PcliUpdateResult {
+    fn from(ur: ProjectUpdateResult) -> Self {
         PcliUpdateResult {
             was_updated: ur.was_updated,
             is_dead: ur.is_dead,

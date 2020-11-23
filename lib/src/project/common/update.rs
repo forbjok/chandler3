@@ -15,8 +15,8 @@ pub struct UpdateResult {
     pub was_updated: bool,
     pub last_modified: Option<DateTime<Utc>>,
     pub is_dead: bool,
+    pub new_links: Vec<LinkInfo>,
     pub new_post_count: u32,
-    pub new_file_count: u32,
 }
 
 pub fn update_thread(
@@ -58,16 +58,16 @@ pub fn update_thread(
                 was_updated: true,
                 last_modified,
                 is_dead: update_result.is_archived,
+                new_links: process_result.new_unprocessed_links,
                 new_post_count: update_result.new_post_count,
-                new_file_count: process_result.new_unprocessed_links.len() as u32,
             })
         }
         DownloadResult::NotModified => Ok(UpdateResult {
             was_updated: false,
             last_modified: None,
             is_dead: false,
+            new_links: Vec::new(),
             new_post_count: 0,
-            new_file_count: 0,
         }),
         DownloadResult::NotFound => {
             // If thread returned 404, mark it as dead.
@@ -75,8 +75,8 @@ pub fn update_thread(
                 was_updated: false,
                 last_modified: None,
                 is_dead: true,
+                new_links: Vec::new(),
                 new_post_count: 0,
-                new_file_count: 0,
             })
         }
         DownloadResult::Error {
@@ -94,7 +94,7 @@ pub fn update_thread(
         ui_handler.event(&UiEvent::UpdateComplete {
             was_updated: result.was_updated,
             new_post_count: result.new_post_count,
-            new_file_count: result.new_file_count,
+            new_file_count: result.new_links.len() as u32,
         });
     }
 

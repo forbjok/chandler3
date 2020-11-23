@@ -141,8 +141,8 @@ impl V3Project {
 }
 
 impl Project for V3Project {
-    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<UpdateResult, ChandlerError> {
-        let update_result = update_thread(
+    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError> {
+        let mut update_result = update_thread(
             &self.root_path,
             &mut self.thread,
             &self.config.url,
@@ -152,6 +152,8 @@ impl Project for V3Project {
             &self.config.parser,
             ui_handler,
         )?;
+
+        let new_file_count = update_result.new_links.len() as u32;
 
         if update_result.was_updated {
             // Pull unprocessed links out of project state.
@@ -165,6 +167,8 @@ impl Project for V3Project {
                     path: li.path,
                 })
                 .collect();
+
+            unprocessed_links.append(&mut update_result.new_links);
 
             // Download linked files.
             download_linked_files(
@@ -186,7 +190,12 @@ impl Project for V3Project {
 
         self.write_thread()?;
 
-        Ok(update_result)
+        Ok(ProjectUpdateResult {
+            was_updated: update_result.was_updated,
+            is_dead: update_result.is_dead,
+            new_post_count: update_result.new_post_count,
+            new_file_count,
+        })
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {

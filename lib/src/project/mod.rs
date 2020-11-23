@@ -7,10 +7,16 @@ mod v3;
 use crate::error::*;
 use crate::ui::*;
 
-pub use self::common::UpdateResult;
+#[derive(Debug)]
+pub struct ProjectUpdateResult {
+    pub was_updated: bool,
+    pub is_dead: bool,
+    pub new_post_count: u32,
+    pub new_file_count: u32,
+}
 
 pub trait Project {
-    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<UpdateResult, ChandlerError>;
+    fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError>;
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
 }
