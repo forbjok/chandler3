@@ -98,9 +98,10 @@ impl ProjectLoader for V3Project {
         let config = cfg::ProjectConfig::load(&config_file_path)?;
         let state = st::ProjectState::load(&state_file_path)?;
 
+        let parser: ParserType = config.parser.into();
+
         // Try to load current thread
-        let thread = config
-            .parser
+        let thread = parser
             .create_thread_updater_from(&root_path.join(THREAD_FILE_NAME))
             .ok();
 
@@ -143,13 +144,9 @@ impl V3Project {
 impl Project for V3Project {
     fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError> {
         let mut update_result = update_thread(
-            &self.root_path,
+            &self.get_config(),
             &mut self.thread,
-            &self.config.url,
             self.state.last_modified,
-            &self.originals_path,
-            &self.config.download_extensions,
-            &self.config.parser,
             ui_handler,
         )?;
 
@@ -205,14 +202,7 @@ impl Project for V3Project {
         let files = get_html_files(&self.originals_path)
             .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
 
-        let result = rebuild_thread(
-            &self.root_path,
-            &self.config.url,
-            &self.config.download_extensions,
-            &self.config.parser,
-            &files,
-            ui_handler,
-        )?;
+        let result = rebuild_thread(&self.get_config(), &files, ui_handler)?;
 
         // Write rebuilt thread to file.
         self.write_thread()?;
@@ -224,5 +214,15 @@ impl Project for V3Project {
         self.save_state()?;
 
         Ok(())
+    }
+
+    fn get_config(&self) -> ProjectConfig {
+        ProjectConfig {
+            download_root_path: self.root_path.clone(),
+            originals_path: self.originals_path.clone(),
+            thread_url: self.config.url.clone(),
+            download_extensions: self.config.download_extensions.clone(),
+            parser: self.config.parser.into(),
+        }
     }
 }

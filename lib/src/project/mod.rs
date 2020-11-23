@@ -1,10 +1,14 @@
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
+use chrono::{DateTime, Utc};
 
 pub mod common;
 mod v2;
 mod v3;
 
 use crate::error::*;
+use crate::threadupdater::{CreateThreadUpdater, ParserType};
 use crate::ui::*;
 
 #[derive(Debug)]
@@ -15,10 +19,20 @@ pub struct ProjectUpdateResult {
     pub new_file_count: u32,
 }
 
+pub struct ProjectConfig {
+    pub download_root_path: PathBuf,
+    pub originals_path: PathBuf,
+    pub thread_url: String,
+    pub download_extensions: HashSet<String>,
+    pub parser: ParserType,
+}
+
 pub trait Project {
     fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError>;
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
+
+    fn get_config(&self) -> ProjectConfig;
 }
 
 pub trait ProjectLoader {

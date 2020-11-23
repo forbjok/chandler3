@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use log::{debug, info};
 
 use crate::error::*;
+use crate::project::ProjectConfig;
 use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
 use crate::ui::*;
 
@@ -20,13 +21,9 @@ pub struct UpdateResult {
 }
 
 pub fn update_thread(
-    root_path: &Path,
+    config: &ProjectConfig,
     original_thread: &mut Option<Box<dyn ThreadUpdater>>,
-    url: &str,
     last_modified: Option<DateTime<Utc>>,
-    originals_path: &Path,
-    download_extensions: &HashSet<String>,
-    parser: &dyn CreateThreadUpdater,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<UpdateResult, ChandlerError> {
     // Get unix timestamp
@@ -35,22 +32,24 @@ pub fn update_thread(
 
     // Construct filename
     let filename = format!("{}.html", unix_now);
-    let thread_file_path = originals_path.join(&filename);
+    let thread_file_path = config.originals_path.join(&filename);
+
+    let url = &config.thread_url;
 
     info!("BEGIN UPDATE: {}", url);
 
     ui_handler.event(&UiEvent::UpdateStart {
         thread_url: url.to_owned(),
-        destination: root_path.to_path_buf(),
+        destination: config.download_root_path.to_path_buf(),
     });
 
     // Download new thread HTML.
-    let result = download_file(url, &thread_file_path, last_modified, ui_handler)?;
+    let result = download_file(&url, &thread_file_path, last_modified, ui_handler)?;
 
     let result = match result {
         DownloadResult::Success { last_modified } => {
             // Process the new HTML.
-            let process_result = process_thread(original_thread, &thread_file_path, url, download_extensions, parser)?;
+            let process_result = process_thread(config, original_thread, &thread_file_path)?;
 
             let update_result = process_result.update_result;
 

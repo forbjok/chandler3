@@ -5,6 +5,11 @@ use crate::html;
 
 pub mod fourchan;
 
+#[derive(Clone, Copy, Debug)]
+pub enum ParserType {
+    FourChan,
+}
+
 pub trait CreateThreadUpdater {
     fn create_thread_updater_from(&self, path: &Path) -> Result<Box<dyn ThreadUpdater>, ChandlerError>;
 }
@@ -20,4 +25,12 @@ pub struct UpdateResult {
     pub is_archived: bool,
     pub new_post_count: u32,
     pub new_links: Vec<html::Link>,
+}
+
+impl CreateThreadUpdater for ParserType {
+    fn create_thread_updater_from(&self, path: &Path) -> Result<Box<dyn ThreadUpdater>, ChandlerError> {
+        Ok(match self {
+            Self::FourChan => Box::new(fourchan::FourchanThreadUpdater::from_file(path)?),
+        })
+    }
 }

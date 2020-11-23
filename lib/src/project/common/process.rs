@@ -6,6 +6,7 @@ use url::Url;
 
 use crate::error::*;
 use crate::html;
+use crate::project::ProjectConfig;
 use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater, UpdateResult};
 
 #[derive(Debug)]
@@ -21,13 +22,11 @@ pub struct ProcessResult {
 }
 
 pub fn process_thread(
+    config: &ProjectConfig,
     original_thread: &mut Option<Box<dyn ThreadUpdater>>,
     thread_file_path: &Path,
-    thread_url: &str,
-    extensions: &HashSet<String>,
-    parser: &dyn CreateThreadUpdater,
 ) -> Result<ProcessResult, ChandlerError> {
-    let thread_url = Url::parse(thread_url)
+    let thread_url = Url::parse(&config.thread_url)
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
     // If there is already a main thread...
@@ -39,7 +38,7 @@ pub fn process_thread(
         // Otherwise...
 
         // Parse new thread
-        let mut new_thread = parser.create_thread_updater_from(thread_file_path)?;
+        let mut new_thread = config.parser.create_thread_updater_from(thread_file_path)?;
         let update_result = new_thread.perform_initial_cleanup()?;
 
         *original_thread = Some(new_thread);
@@ -51,7 +50,7 @@ pub fn process_thread(
 
     // Process new links.
     for link in update_result.new_links.iter_mut() {
-        if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
+        if let Some(link_info) = process_link(link, &thread_url, &config.download_extensions)? {
             new_unprocessed_links.push(link_info);
         }
     }

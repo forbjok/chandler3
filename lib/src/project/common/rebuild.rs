@@ -13,16 +13,13 @@ pub struct RebuildResult {
 }
 
 pub fn rebuild_thread(
-    path: &Path,
-    thread_url: &str,
-    extensions: &HashSet<String>,
-    parser: &dyn CreateThreadUpdater,
+    config: &ProjectConfig,
     original_files: &[PathBuf],
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<RebuildResult, ChandlerError> {
     // Report rebuild start.
     ui_handler.event(&UiEvent::RebuildStart {
-        path: path.to_path_buf(),
+        path: config.download_root_path.to_path_buf(),
         file_count: original_files.len() as u32,
     });
 
@@ -30,7 +27,7 @@ pub fn rebuild_thread(
     let mut files_processed: u32 = 0;
 
     for file in original_files.iter() {
-        let update_result = process_thread(&mut thread, file, thread_url, extensions, parser)?;
+        let update_result = process_thread(config, &mut thread, file)?;
 
         // Report progress.
         files_processed += 1;
