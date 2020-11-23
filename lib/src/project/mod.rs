@@ -24,7 +24,15 @@ pub trait ProjectLoader {
 }
 
 pub fn exists_at(path: impl AsRef<Path>) -> bool {
-    true //TODO: Implement
+    let path = path.as_ref();
+
+    if v3::V3Project::exists_at(path) {
+        true
+    } else if v2::V2Project::exists_at(path) {
+        true
+    } else {
+        false
+    }
 }
 
 pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
