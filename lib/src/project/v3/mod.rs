@@ -2,8 +2,7 @@ use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use chrono::Utc;
-use log::{debug, info};
+use log::info;
 
 mod config;
 mod state;
@@ -143,119 +142,51 @@ impl V3Project {
 
 impl Project for V3Project {
     fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<UpdateResult, ChandlerError> {
-        // Get unix timestamp
-        let now = Utc::now();
-        let unix_now = now.timestamp();
+        let update_result = update_thread(
+            &self.root_path,
+            &mut self.thread,
+            &self.config.url,
+            self.state.last_modified,
+            &self.originals_path,
+            &self.config.download_extensions,
+            &self.config.parser,
+            ui_handler,
+        )?;
 
-        // Construct filename
-        let filename = format!("{}.html", unix_now);
-        let thread_file_path = self.originals_path.join(&filename);
-
-        let url = &self.config.url;
-
-        info!("BEGIN UPDATE: {}", url);
-
-        ui_handler.event(&UiEvent::UpdateStart {
-            thread_url: url.clone(),
-            destination: self.root_path.clone(),
-        });
-
-        // Download new thread HTML.
-        let result = download_file(url, &thread_file_path, self.state.last_modified, ui_handler)?;
-
-        let result = match result {
-            DownloadResult::Success { last_modified } => {
-                // Update last modified timestamp.
-                self.state.last_modified = last_modified;
-
-                // Process the new HTML.
-                let process_result = process_thread(
-                    &mut self.thread,
-                    &thread_file_path,
-                    &self.config.url,
-                    &self.config.download_extensions,
-                    &self.config.parser,
-                )?;
-
-                let update_result = process_result.update_result;
-
-                self.state.is_dead = update_result.is_archived;
-
-                // Pull unprocessed links out of project state.
-                let mut unprocessed_links: Vec<LinkInfo> = self
-                    .state
-                    .links
-                    .unprocessed
-                    .drain(..)
-                    .map(|li| LinkInfo {
-                        url: li.url,
-                        path: li.path,
-                    })
-                    .collect();
-
-                // Download linked files.
-                download_linked_files(
-                    &self.root_path,
-                    &mut unprocessed_links,
-                    &mut self.state.links.failed,
-                    ui_handler,
-                )?;
-
-                // Re-add remaining unprocessed links to project state.
-                self.state
-                    .links
-                    .unprocessed
-                    .extend(unprocessed_links.into_iter().map(|li| st::LinkInfo {
-                        url: li.url,
-                        path: li.path,
-                    }));
-
-                self.write_thread()?;
-
-                Ok(UpdateResult {
-                    was_updated: true,
-                    is_dead: self.state.is_dead,
-                    new_post_count: update_result.new_post_count,
-                    new_file_count: process_result.new_unprocessed_links.len() as u32,
+        if update_result.was_updated {
+            // Pull unprocessed links out of project state.
+            let mut unprocessed_links: Vec<LinkInfo> = self
+                .state
+                .links
+                .unprocessed
+                .drain(..)
+                .map(|li| LinkInfo {
+                    url: li.url,
+                    path: li.path,
                 })
-            }
-            DownloadResult::NotModified => Ok(UpdateResult {
-                was_updated: false,
-                is_dead: self.state.is_dead,
-                new_post_count: 0,
-                new_file_count: 0,
-            }),
-            DownloadResult::NotFound => {
-                // If thread returned 404, mark it as dead.
-                self.state.is_dead = true;
+                .collect();
 
-                Ok(UpdateResult {
-                    was_updated: false,
-                    is_dead: self.state.is_dead,
-                    new_post_count: 0,
-                    new_file_count: 0,
-                })
-            }
-            DownloadResult::Error {
-                status_code,
-                description,
-            } => Err(ChandlerError::DownloadHttpStatus {
-                status_code,
-                description: description.into(),
-            }),
-        };
+            // Download linked files.
+            download_linked_files(
+                &self.root_path,
+                &mut unprocessed_links,
+                &mut self.state.links.failed,
+                ui_handler,
+            )?;
 
-        info!("END UPDATE");
-
-        if let Ok(result) = &result {
-            ui_handler.event(&UiEvent::UpdateComplete {
-                was_updated: result.was_updated,
-                new_post_count: result.new_post_count,
-                new_file_count: result.new_file_count,
-            });
+            // Re-add remaining unprocessed links to project state.
+            self.state
+                .links
+                .unprocessed
+                .extend(unprocessed_links.into_iter().map(|li| st::LinkInfo {
+                    url: li.url,
+                    path: li.path,
+                }));
         }
 
-        result
+        self.write_thread()?;
+
+        Ok(update_result)
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
