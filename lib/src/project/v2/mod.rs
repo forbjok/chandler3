@@ -156,6 +156,9 @@ impl Project for V2Project {
         let new_file_count = update_result.new_links.len() as u32;
 
         if update_result.was_updated {
+            // Update last modified date in project state.
+            self.state.last_modified = update_result.last_modified;
+
             // Pull unprocessed links out of project state.
             let mut unprocessed_links: Vec<LinkInfo> = self
                 .state
