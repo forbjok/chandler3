@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
@@ -19,7 +21,7 @@ pub enum Parser {
 pub struct ProjectConfig {
     pub parser: Parser,
     pub url: String,
-    pub download_extensions: Vec<String>,
+    pub download_extensions: HashSet<String>,
 }
 
 impl ProjectConfig {

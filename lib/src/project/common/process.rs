@@ -1,53 +1,64 @@
 use std::collections::HashSet;
+use std::path::Path;
 
+use log::debug;
 use url::Url;
 
+use crate::error::*;
 use crate::html;
-use crate::threadupdater::UpdateResult;
+use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater, UpdateResult};
 
-use super::*;
-
-pub struct ProcessResult {
-    pub update_result: UpdateResult,
-    pub new_file_count: u32,
+#[derive(Debug)]
+pub struct LinkInfo {
+    pub url: String,
+    pub path: String,
 }
 
-pub fn process_thread(project: &mut ChandlerProject, thread_file_path: &Path) -> Result<ProcessResult, ChandlerError> {
-    let state = &mut project.state;
-    let extensions: HashSet<String> = project.config.download_extensions.iter().cloned().collect();
+#[derive(Debug)]
+pub struct ProcessResult {
+    pub update_result: UpdateResult,
+    pub new_unprocessed_links: Vec<LinkInfo>,
+}
 
-    let thread_url = Url::parse(&project.config.url)
+pub fn process_thread(
+    original_thread: &mut Option<Box<dyn ThreadUpdater>>,
+    thread_file_path: &Path,
+    thread_url: &str,
+    extensions: &HashSet<String>,
+    parser: &dyn CreateThreadUpdater,
+) -> Result<ProcessResult, ChandlerError> {
+    let thread_url = Url::parse(thread_url)
         .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
 
     // If there is already a main thread...
-    let mut update_result = if let Some(original_thread) = project.thread.as_mut() {
-        original_thread.update_from(thread_file_path)?
+    let mut update_result = if let Some(original_thread) = original_thread {
+        let update_result = original_thread.update_from(thread_file_path)?;
+
+        update_result
     } else {
         // Otherwise...
 
         // Parse new thread
-        let mut new_thread = project.config.parser.create_thread_updater_from(thread_file_path)?;
+        let mut new_thread = parser.create_thread_updater_from(thread_file_path)?;
         let update_result = new_thread.perform_initial_cleanup()?;
 
-        project.thread = Some(new_thread);
+        *original_thread = Some(new_thread);
 
         update_result
     };
 
-    let mut new_file_count: u32 = 0;
+    let mut new_unprocessed_links: Vec<LinkInfo> = Vec::new();
 
     // Process new links.
     for link in update_result.new_links.iter_mut() {
         if let Some(link_info) = process_link(link, &thread_url, &extensions)? {
-            state.links.unprocessed.push(link_info);
-
-            new_file_count += 1;
+            new_unprocessed_links.push(link_info);
         }
     }
 
     Ok(ProcessResult {
         update_result,
-        new_file_count,
+        new_unprocessed_links,
     })
 }
 

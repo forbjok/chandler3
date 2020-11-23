@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde_derive::Serialize;
 
-use chandler::UpdateResult;
+use chandler::project::UpdateResult;
 
 #[derive(Debug, Serialize)]
 pub struct PcliUpdateResult {

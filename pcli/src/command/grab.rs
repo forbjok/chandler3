@@ -3,8 +3,8 @@ use std::path::Path;
 
 use log::info;
 
+use chandler::project::{self, UpdateResult};
 use chandler::util;
-use chandler::{ChandlerProject, Project, UpdateResult};
 
 use crate::result::*;
 use crate::ui::*;
@@ -17,14 +17,13 @@ pub fn grab(url: &str, destination: &Path) -> Result<(), CommandError> {
     info!("Project path: {}", project_path.display());
 
     let result = (|| -> Result<UpdateResult, PcliError> {
-        let mut project = ChandlerProject::load_or_create(&project_path, url)?;
+        let mut project = project::load_or_create(&project_path, url)?;
 
         let mut ui_handler = StderrUiHandler::new();
 
         let update_result = project.update(&mut ui_handler)?;
 
         project.save()?;
-        project.write_thread()?;
 
         Ok(update_result)
     })();

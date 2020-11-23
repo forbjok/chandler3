@@ -15,6 +15,7 @@ pub trait ThreadUpdater {
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError>;
 }
 
+#[derive(Debug)]
 pub struct UpdateResult {
     pub is_archived: bool,
     pub new_post_count: u32,

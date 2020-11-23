@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use log::{debug, info};
 
+use crate::error::*;
 use crate::ui::*;
 use crate::util;
 
@@ -130,12 +132,11 @@ pub fn download_file(
 
 /// Download all links for this project.
 pub fn download_linked_files(
-    project: &mut ChandlerProject,
+    path: &Path,
+    unprocessed_links: &mut Vec<LinkInfo>,
+    failed_links: &mut Vec<String>,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
-    let mut unprocessed_links: Vec<LinkInfo> = Vec::new();
-    unprocessed_links.append(&mut project.state.links.unprocessed);
-
     // Report download start.
     ui_handler.event(&UiEvent::DownloadStart {
         file_count: unprocessed_links.len() as u32,
@@ -157,14 +158,14 @@ pub fn download_linked_files(
 
         let link_info = unprocessed_links.remove(0);
 
-        let path = project.root_path.join(&link_info.path);
+        let path = path.join(&link_info.path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
 
         if let Err(err) = download_file(&link_info.url, &path, None, ui_handler) {
             debug!("Error downloading link: {}", err.to_string());
 
-            project.state.links.failed.push(link_info.url.clone());
-            project.state.links.unprocessed.push(link_info);
+            failed_links.push(link_info.url.clone());
+            unprocessed_links.push(link_info);
 
             files_failed += 1;
         } else {
@@ -176,8 +177,6 @@ pub fn download_linked_files(
         // Report download progress.
         ui_handler.event(&UiEvent::DownloadProgress { files_processed });
     }
-
-    project.state.links.unprocessed.append(&mut unprocessed_links);
 
     // Report download complete.
     ui_handler.event(&UiEvent::DownloadComplete {

@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 
-use chandler::{ChandlerProject, Project};
+use chandler::project;
 
 use crate::misc::pathgen;
 use crate::ui::*;
@@ -50,7 +50,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_seconds = interval as u64;
 
-    let mut project = ChandlerProject::load_or_create(project_path, &url)
+    let mut project = project::load_or_create(project_path, &url)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     let interval_duration = chrono::Duration::seconds(interval);
@@ -74,7 +74,6 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
         // Save changes to disk.
         project.save()?;
-        project.write_thread()?;
 
         // If the thread is dead, break out of loop.
         if update_result.is_dead {

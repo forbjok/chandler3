@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use log::info;
 
-use chandler::{ChandlerProject, Project};
+use chandler::project;
 
 use crate::misc::pathgen;
 use crate::ui::*;
@@ -25,7 +25,7 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
 
     info!("Project path: {}", project_path.display());
 
-    let mut project = ChandlerProject::load_or_create(project_path, url)
+    let mut project = project::load_or_create(project_path, url)
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     // Cancellation boolean.
@@ -54,7 +54,6 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
         .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
 
     project.save()?;
-    project.write_thread()?;
 
     Ok(())
 }

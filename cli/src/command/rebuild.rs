@@ -3,7 +3,7 @@ use std::path::Path;
 use log::debug;
 use serde_derive::Serialize;
 
-use chandler::{ChandlerProject, Project};
+use chandler::project;
 
 use crate::ui::*;
 
@@ -17,7 +17,7 @@ pub fn rebuild(path: &Path) -> Result<(), CommandError> {
     }
 
     // Try to load Chandler project
-    let mut project = ChandlerProject::load(&path)?;
+    let mut project = project::load(&path)?;
 
     let mut ui_handler = IndicatifUiHandler::new(Box::new(|| false));
 
