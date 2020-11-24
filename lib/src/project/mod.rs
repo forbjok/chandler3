@@ -11,6 +11,12 @@ use crate::error::*;
 use crate::threadupdater::{CreateThreadUpdater, ParserType};
 use crate::ui::*;
 
+#[derive(Clone, Copy, Debug)]
+pub enum ProjectFormat {
+    V2,
+    V3,
+}
+
 #[derive(Debug)]
 pub struct ProjectUpdateResult {
     pub was_updated: bool,
@@ -68,12 +74,23 @@ pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
     }
 }
 
-pub fn load_or_create(path: impl AsRef<Path>, url: &str) -> Result<Box<dyn Project>, ChandlerError> {
+pub fn load_or_create_format(
+    path: impl AsRef<Path>,
+    url: &str,
+    create_project_format: ProjectFormat,
+) -> Result<Box<dyn Project>, ChandlerError> {
     let path = path.as_ref();
 
     if exists_at(path) {
         load(path)
     } else {
-        Ok(Box::new(v3::V3Project::create(path, url)?))
+        Ok(match create_project_format {
+            ProjectFormat::V2 => Box::new(v2::V2Project::create(path, url)?),
+            ProjectFormat::V3 => Box::new(v3::V3Project::create(path, url)?),
+        })
     }
+}
+
+pub fn load_or_create(path: impl AsRef<Path>, url: &str) -> Result<Box<dyn Project>, ChandlerError> {
+    load_or_create_format(path, url, ProjectFormat::V3)
 }

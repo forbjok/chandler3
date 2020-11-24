@@ -2,10 +2,18 @@ use std::path::PathBuf;
 
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
+use strum_macros::EnumString;
 
 mod command;
 mod result;
 mod ui;
+
+#[derive(Debug, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum ProjectFormat {
+    V2,
+    V3,
+}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Chandler Programmatic CLI", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
@@ -24,6 +32,8 @@ enum Command {
         url: String,
         #[structopt(help = "Destination path to download to")]
         destination: PathBuf,
+        #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
+        format: ProjectFormat,
     },
 }
 
@@ -47,7 +57,11 @@ fn main() {
     debug!("Debug logging enabled.");
 
     let cmd_result = match opt.command {
-        Command::Grab { url, destination } => command::grab(&url, &destination),
+        Command::Grab {
+            url,
+            destination,
+            format,
+        } => command::grab(&url, &destination, format),
     };
 
     match cmd_result {
