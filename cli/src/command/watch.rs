@@ -27,7 +27,9 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         .resolve()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
 
-    let project_path = pathgen::generate_destination_path(&config, url).map_err(|err| {
+    let sites_config = crate::config::load_sites_config()?;
+
+    let project_path = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
         CommandError::new(
             CommandErrorKind::Other,
             format!("Could not generate path for url '{}': {}", url, err),

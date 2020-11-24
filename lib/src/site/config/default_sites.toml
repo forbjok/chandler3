@@ -1,0 +1,3 @@
+[sites."4chan"]
+url-regexes = ['^http(?:s)?://boards.(?:4chan|4channel).org/(.+)/thread/(\d+)']
+parser = "4chan"
