@@ -8,24 +8,22 @@ use crate::util;
 use super::*;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LinkInfo {
+pub struct Link {
     pub url: String,
     pub path: String,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LinkState {
-    pub unprocessed: Vec<LinkInfo>,
-    pub failed: Vec<String>,
+pub struct Links {
+    pub new: Vec<Link>,
+    pub failed: Vec<Link>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ProjectState {
     pub last_modified: Option<DateTime<Utc>>,
     pub is_dead: bool,
-    pub links: LinkState,
+    pub links: Links,
 }
 
 impl ProjectState {

@@ -17,7 +17,7 @@ use self::state as st;
 use super::common::*;
 use super::*;
 
-const PROJECT_DIR_NAME: &str = ".chandler";
+const PROJECT_DIR_NAME: &str = ".chandler3";
 const ORIGINALS_DIR_NAME: &str = "originals";
 const CONFIG_FILE_NAME: &str = "thread.json";
 const STATE_FILE_NAME: &str = "state.json";
@@ -156,33 +156,37 @@ impl Project for V3Project {
             // Update last modified date in project state.
             self.state.last_modified = update_result.last_modified;
 
-            // Pull unprocessed links out of project state.
-            let mut unprocessed_links: Vec<LinkInfo> = self
+            // Pull failed and new links out of project state.
+            let mut new_links: Vec<LinkInfo> = self
                 .state
                 .links
-                .unprocessed
+                .failed
                 .drain(..)
+                .chain(self.state.links.new.drain(..)) // Wrong order
                 .map(|li| LinkInfo {
                     url: li.url,
                     path: li.path,
                 })
                 .collect();
 
-            unprocessed_links.append(&mut update_result.new_links);
+            new_links.append(&mut update_result.new_links);
+
+            let mut failed_links: Vec<LinkInfo> = Vec::new();
 
             // Download linked files.
-            download_linked_files(
-                &self.root_path,
-                &mut unprocessed_links,
-                &mut self.state.links.failed,
-                ui_handler,
-            )?;
+            download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
 
-            // Re-add remaining unprocessed links to project state.
+            // Re-add remaining new links to project state.
+            self.state.links.new.extend(new_links.into_iter().map(|li| st::Link {
+                url: li.url,
+                path: li.path,
+            }));
+
+            // Add failed links to project state.
             self.state
                 .links
-                .unprocessed
-                .extend(unprocessed_links.into_iter().map(|li| st::LinkInfo {
+                .failed
+                .extend(failed_links.into_iter().map(|li| st::Link {
                     url: li.url,
                     path: li.path,
                 }));

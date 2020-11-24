@@ -93,7 +93,7 @@ fn process_link(
     }
 }
 
-fn local_path_from_url(url_str: &str, thread_url: &Url) -> Result<Option<String>, ChandlerError> {
+pub fn local_path_from_url(url_str: &str, thread_url: &Url) -> Result<Option<String>, ChandlerError> {
     let url = thread_url
         .join(url_str)
         .map_err(|err| ChandlerError::Other(err.to_string().into()))?;

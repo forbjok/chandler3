@@ -17,7 +17,6 @@ pub enum Parser {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ProjectConfig {
     pub parser: Parser,
     pub url: String,

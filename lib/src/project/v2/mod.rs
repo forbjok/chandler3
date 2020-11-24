@@ -8,6 +8,7 @@ mod config;
 mod state;
 
 use crate::error::*;
+use crate::html;
 use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
 use crate::ui::*;
 
@@ -156,36 +157,41 @@ impl Project for V2Project {
             // Update last modified date in project state.
             self.state.last_modified = update_result.last_modified;
 
-            // Pull unprocessed links out of project state.
-            let mut unprocessed_links: Vec<LinkInfo> = self
+            let thread_url = url::Url::parse(&self.config.url)
+                .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+            // Pull failed (in V2 projects, this includes unprocessed) links out of project state.
+            let mut new_links: Vec<LinkInfo> = self
                 .state
                 .links
-                .unprocessed
+                .failed
                 .drain(..)
-                .map(|li| LinkInfo {
-                    url: li.url,
-                    path: li.path,
+                .filter_map(|url| {
+                    if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
+                        Some((url, path))
+                    } else {
+                        None
+                    }
                 })
+                .map(|(url, path)| LinkInfo { url, path })
                 .collect();
 
-            unprocessed_links.append(&mut update_result.new_links);
+            new_links.append(&mut update_result.new_links);
+
+            let mut failed_links: Vec<LinkInfo> = Vec::new();
 
             // Download linked files.
-            download_linked_files(
-                &self.root_path,
-                &mut unprocessed_links,
-                &mut self.state.links.failed,
-                ui_handler,
-            )?;
+            download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
 
-            // Re-add remaining unprocessed links to project state.
+            // Add remaining new links to failed link, because this is how it
+            // was handled in V2 projects.
+            failed_links.append(&mut new_links);
+
+            // Re-add remaining failed links.
             self.state
                 .links
-                .unprocessed
-                .extend(unprocessed_links.into_iter().map(|li| st::LinkInfo {
-                    url: li.url,
-                    path: li.path,
-                }));
+                .failed
+                .extend(failed_links.into_iter().map(|li| li.url));
         }
 
         self.write_thread()?;

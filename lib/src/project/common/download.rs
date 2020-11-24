@@ -134,7 +134,7 @@ pub fn download_file(
 pub fn download_linked_files(
     path: &Path,
     unprocessed_links: &mut Vec<LinkInfo>,
-    failed_links: &mut Vec<String>,
+    failed_links: &mut Vec<LinkInfo>,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
     // Report download start.
@@ -164,8 +164,7 @@ pub fn download_linked_files(
         if let Err(err) = download_file(&link_info.url, &path, None, ui_handler) {
             debug!("Error downloading link: {}", err.to_string());
 
-            failed_links.push(link_info.url.clone());
-            unprocessed_links.push(link_info);
+            failed_links.push(link_info);
 
             files_failed += 1;
         } else {

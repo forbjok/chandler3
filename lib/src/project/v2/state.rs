@@ -16,7 +16,6 @@ pub struct LinkInfo {
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkState {
-    pub unprocessed: Vec<LinkInfo>,
     pub failed: Vec<String>,
 }
 
