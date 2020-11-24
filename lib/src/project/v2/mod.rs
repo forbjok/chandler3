@@ -11,6 +11,7 @@ use crate::error::*;
 use crate::html;
 use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
 use crate::ui::*;
+use crate::util::pid::PidLock;
 
 use self::config as cfg;
 use self::state as st;
@@ -23,6 +24,7 @@ const ORIGINALS_DIR_NAME: &str = "originals";
 const CONFIG_FILE_NAME: &str = "thread.json";
 const STATE_FILE_NAME: &str = "state.json";
 const THREAD_FILE_NAME: &str = "thread.html";
+const PID_FILE_NAME: &str = "chandler.pid";
 
 pub struct V2Project {
     root_path: PathBuf,
@@ -33,6 +35,7 @@ pub struct V2Project {
     config: cfg::ProjectConfig,
     state: st::ProjectState,
     thread: Option<Box<dyn ThreadUpdater>>,
+    pidlock: PidLock,
 }
 
 impl ProjectLoader for V2Project {
@@ -68,6 +71,14 @@ impl ProjectLoader for V2Project {
             ChandlerError::CreateProject(Cow::Owned(format!("Cannot create originals directory: {}", err)))
         })?;
 
+        let pidlock = if let Some(pidlock) = acquire_pidlock(&root_path, PID_FILE_NAME) {
+            pidlock
+        } else {
+            return Err(ChandlerError::CreateProject(
+                "Could not acquire PID lock for project.".into(),
+            ));
+        };
+
         let config_file_path = project_path.join(CONFIG_FILE_NAME);
         let state_file_path = project_path.join(STATE_FILE_NAME);
 
@@ -84,11 +95,21 @@ impl ProjectLoader for V2Project {
             config,
             state,
             thread: None,
+            pidlock,
         })
     }
 
     fn load(path: &Path) -> Result<Self::P, ChandlerError> {
         let root_path = path.to_path_buf();
+
+        let pidlock = if let Some(pidlock) = acquire_pidlock(&root_path, PID_FILE_NAME) {
+            pidlock
+        } else {
+            return Err(ChandlerError::CreateProject(
+                "Could not acquire PID lock for project.".into(),
+            ));
+        };
+
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
 
@@ -115,6 +136,7 @@ impl ProjectLoader for V2Project {
             config,
             state,
             thread,
+            pidlock,
         })
     }
 
