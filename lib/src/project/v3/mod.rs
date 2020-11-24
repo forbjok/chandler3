@@ -152,47 +152,23 @@ impl Project for V3Project {
 
         let new_file_count = update_result.new_links.len() as u32;
 
-        if update_result.was_updated {
-            // Update last modified date in project state.
-            self.state.last_modified = update_result.last_modified;
+        // Update last modified date in project state.
+        self.state.last_modified = update_result.last_modified;
 
-            // Pull failed and new links out of project state.
-            let mut new_links: Vec<LinkInfo> = self
-                .state
-                .links
-                .failed
-                .drain(..)
-                .chain(self.state.links.new.drain(..)) // Wrong order
-                .map(|li| LinkInfo {
-                    url: li.url,
-                    path: li.path,
-                })
-                .collect();
-
-            new_links.append(&mut update_result.new_links);
-
-            let mut failed_links: Vec<LinkInfo> = Vec::new();
-
-            // Download linked files.
-            download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
-
-            // Re-add remaining new links to project state.
-            self.state.links.new.extend(new_links.into_iter().map(|li| st::Link {
+        // Add new links to project state.
+        self.state
+            .links
+            .new
+            .extend(update_result.new_links.into_iter().map(|li| st::Link {
                 url: li.url,
                 path: li.path,
             }));
 
-            // Add failed links to project state.
-            self.state
-                .links
-                .failed
-                .extend(failed_links.into_iter().map(|li| st::Link {
-                    url: li.url,
-                    path: li.path,
-                }));
-        }
-
+        // Write thread HTML.
         self.write_thread()?;
+
+        // Download links.
+        self.download_links(ui_handler)?;
 
         Ok(ProjectUpdateResult {
             was_updated: update_result.was_updated,
@@ -200,6 +176,43 @@ impl Project for V3Project {
             new_post_count: update_result.new_post_count,
             new_file_count,
         })
+    }
+
+    fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
+        // Pull failed and new links out of project state.
+        let mut new_links: Vec<LinkInfo> = self
+            .state
+            .links
+            .failed
+            .drain(..)
+            .chain(self.state.links.new.drain(..)) // Wrong order
+            .map(|li| LinkInfo {
+                url: li.url,
+                path: li.path,
+            })
+            .collect();
+
+        let mut failed_links: Vec<LinkInfo> = Vec::new();
+
+        // Download linked files.
+        download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
+
+        // Re-add remaining new links to project state.
+        self.state.links.new.extend(new_links.into_iter().map(|li| st::Link {
+            url: li.url,
+            path: li.path,
+        }));
+
+        // Add failed links to project state.
+        self.state
+            .links
+            .failed
+            .extend(failed_links.into_iter().map(|li| st::Link {
+                url: li.url,
+                path: li.path,
+            }));
+
+        Ok(())
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {

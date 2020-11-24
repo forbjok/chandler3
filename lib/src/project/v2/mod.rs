@@ -153,48 +153,20 @@ impl Project for V2Project {
 
         let new_file_count = update_result.new_links.len() as u32;
 
-        if update_result.was_updated {
-            // Update last modified date in project state.
-            self.state.last_modified = update_result.last_modified;
+        // Update last modified date in project state.
+        self.state.last_modified = update_result.last_modified;
 
-            let thread_url = url::Url::parse(&self.config.url)
-                .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+        // Add new links to project state.
+        self.state
+            .links
+            .failed
+            .extend(update_result.new_links.into_iter().map(|li| li.url));
 
-            // Pull failed (in V2 projects, this includes unprocessed) links out of project state.
-            let mut new_links: Vec<LinkInfo> = self
-                .state
-                .links
-                .failed
-                .drain(..)
-                .filter_map(|url| {
-                    if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
-                        Some((url, path))
-                    } else {
-                        None
-                    }
-                })
-                .map(|(url, path)| LinkInfo { url, path })
-                .collect();
-
-            new_links.append(&mut update_result.new_links);
-
-            let mut failed_links: Vec<LinkInfo> = Vec::new();
-
-            // Download linked files.
-            download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
-
-            // Add remaining new links to failed link, because this is how it
-            // was handled in V2 projects.
-            failed_links.append(&mut new_links);
-
-            // Re-add remaining failed links.
-            self.state
-                .links
-                .failed
-                .extend(failed_links.into_iter().map(|li| li.url));
-        }
-
+        // Write thread HTML.
         self.write_thread()?;
+
+        // Download links.
+        self.download_links(ui_handler)?;
 
         Ok(ProjectUpdateResult {
             was_updated: update_result.was_updated,
@@ -202,6 +174,44 @@ impl Project for V2Project {
             new_post_count: update_result.new_post_count,
             new_file_count,
         })
+    }
+
+    fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
+        let thread_url = url::Url::parse(&self.config.url)
+            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+        // Pull failed (in V2 projects, this includes unprocessed) links out of project state.
+        let mut new_links: Vec<LinkInfo> = self
+            .state
+            .links
+            .failed
+            .drain(..)
+            .filter_map(|url| {
+                if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
+                    Some((url, path))
+                } else {
+                    None
+                }
+            })
+            .map(|(url, path)| LinkInfo { url, path })
+            .collect();
+
+        let mut failed_links: Vec<LinkInfo> = Vec::new();
+
+        // Download linked files.
+        download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
+
+        // Add remaining new links to failed link, because this is how it
+        // was handled in V2 projects.
+        failed_links.append(&mut new_links);
+
+        // Re-add remaining failed links.
+        self.state
+            .links
+            .failed
+            .extend(failed_links.into_iter().map(|li| li.url));
+
+        Ok(())
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
