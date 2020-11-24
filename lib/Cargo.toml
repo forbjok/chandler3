@@ -18,6 +18,6 @@ reqwest = { version = "0.10.9", features = ["blocking"] }
 serde = "1.0.117"
 serde_derive = "1.0.117"
 serde_json = "1.0.59"
+sysinfo = "0.15.3"
 toml = "0.5.7"
 url = "2.2.0"
-winapi = "0.3.9"

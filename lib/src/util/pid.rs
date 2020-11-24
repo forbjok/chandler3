@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use log::debug;
+use sysinfo::Pid;
 
 pub struct PidLock {
     path: PathBuf,
@@ -20,7 +21,7 @@ impl PidLock {
                 let mut pid = String::new();
                 file.read_to_string(&mut pid).unwrap();
 
-                let pid: u32 = pid.parse().unwrap();
+                let pid: Pid = pid.parse().unwrap();
 
                 debug!("File contains PID {}.", pid);
                 if process_exists(pid) {
@@ -52,46 +53,14 @@ impl Drop for PidLock {
     }
 }
 
-#[cfg(windows)]
-fn process_exists(pid: u32) -> bool {
-    use winapi::{
-        shared::minwindef::{DWORD, FALSE, LPDWORD},
-        um::{
-            handleapi::CloseHandle,
-            minwinbase::STILL_ACTIVE,
-            processthreadsapi::{GetExitCodeProcess, OpenProcess},
-            winnt::PROCESS_QUERY_INFORMATION,
-        },
-    };
+fn process_exists(pid: Pid) -> bool {
+    use sysinfo::{System, SystemExt};
 
-    // Try to open process
-    let handle = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid as DWORD) };
+    let mut sys = System::new_all();
 
-    if handle.is_null() {
-        false
+    if let Some(p) = sys.get_process(pid) {
+        true
     } else {
-        let exitcode: LPDWORD = unsafe { std::mem::zeroed() };
-
-        // Try to get exit code for process
-        let get_exitcode_result = unsafe { GetExitCodeProcess(handle, exitcode) };
-
-        // Close process handle
-        unsafe { CloseHandle(handle) };
-
-        if get_exitcode_result == FALSE {
-            true
-        } else {
-            if unsafe { *exitcode } == STILL_ACTIVE {
-                true
-            } else {
-                false
-            }
-        }
+        false
     }
-}
-
-#[cfg(not(windows))]
-fn process_exists(pid: u32) -> bool {
-    warn!("PidLock not implemented for this OS!");
-    false
 }
