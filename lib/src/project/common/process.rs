@@ -31,9 +31,7 @@ pub fn process_thread(
 
     // If there is already a main thread...
     let mut update_result = if let Some(original_thread) = original_thread {
-        let update_result = original_thread.update_from(thread_file_path)?;
-
-        update_result
+        original_thread.update_from(thread_file_path)?
     } else {
         // Otherwise...
 

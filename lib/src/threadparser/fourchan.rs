@@ -23,18 +23,14 @@ impl FourchanPost {
     pub fn from_node(node: NodeRef) -> Option<Self> {
         // Try to get post ID from node
         let id = (|| {
-            match node.data() {
-                NodeData::Element(data) => {
-                    // Try to locate "id" attribute
-                    if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
-                        // Try to parse it as an integer, skipping the "pc" prefix
-                        if let Ok(id) = id_attr[2..].parse::<u32>() {
-                            return Some(id);
-                        }
+            if let NodeData::Element(data) = node.data() {
+                // Try to locate "id" attribute
+                if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
+                    // Try to parse it as an integer, skipping the "pc" prefix
+                    if let Ok(id) = id_attr[2..].parse::<u32>() {
+                        return Some(id);
                     }
                 }
-
-                _ => {}
             }
 
             None
@@ -82,7 +78,7 @@ impl MergeableImageboardThread for FourchanThread {
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
-        let mut file = util::create_file(file_path).map_err(|err| ChandlerError::CreateFile(err))?;
+        let mut file = util::create_file(file_path).map_err(ChandlerError::CreateFile)?;
 
         html5ever::serialize(&mut file, &self.root, Default::default())
             .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
@@ -93,7 +89,7 @@ impl MergeableImageboardThread for FourchanThread {
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
-            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Error getting thread element!")))?;
+            .ok_or_else(|| ChandlerError::Other("Error getting thread element!".into()))?;
 
         let posts = thread_element.children().collect();
 
@@ -104,18 +100,16 @@ impl MergeableImageboardThread for FourchanThread {
         let last_main_post = self
             .get_all_posts()?
             .last()
-            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Could not get last post!")))?;
+            .ok_or_else(|| ChandlerError::Other("Could not get last post!".into()))?;
 
         let main_post_parent = last_main_post
             .node
             .parent()
-            .ok_or_else(|| ChandlerError::Other(Cow::Borrowed("Could not get main post parent node!")))?;
-
-        let mut other_thread_post_iter = other.get_all_posts()?;
+            .ok_or_else(|| ChandlerError::Other("Could not get main post parent node!".into()))?;
 
         let mut new_posts: Vec<FourchanPost> = Vec::new();
 
-        while let Some(other_post) = other_thread_post_iter.next() {
+        for other_post in other.get_all_posts()? {
             if other_post.id <= last_main_post.id {
                 continue;
             }

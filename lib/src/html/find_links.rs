@@ -28,33 +28,29 @@ impl LinkTag {
 
 impl Link {
     pub fn from_node(node: NodeRef) -> Option<Self> {
-        match node.clone().data() {
-            NodeData::Element(data) => {
-                match data.name.local {
-                    // <a> element
-                    local_name!("a") => {
-                        return Some(Link { node, tag: LinkTag::A });
-                    }
-                    // <img> element
-                    local_name!("img") => {
-                        return Some(Link {
-                            node,
-                            tag: LinkTag::Img,
-                        });
-                    }
-                    // <link> element
-                    local_name!("link") => {
-                        return Some(Link {
-                            node,
-                            tag: LinkTag::Link,
-                        });
-                    }
-
-                    _ => {}
+        if let NodeData::Element(data) = node.data() {
+            match data.name.local {
+                // <a> element
+                local_name!("a") => {
+                    return Some(Link { node, tag: LinkTag::A });
                 }
-            }
+                // <img> element
+                local_name!("img") => {
+                    return Some(Link {
+                        node,
+                        tag: LinkTag::Img,
+                    });
+                }
+                // <link> element
+                local_name!("link") => {
+                    return Some(Link {
+                        node,
+                        tag: LinkTag::Link,
+                    });
+                }
 
-            _ => {}
+                _ => {}
+            }
         }
 
         None
@@ -80,11 +76,11 @@ impl Link {
                 return false;
             }
 
-            if link.starts_with("#") {
+            if link.starts_with('#') {
                 return false;
             }
 
-            if link.ends_with("/") {
+            if link.ends_with('/') {
                 return false;
             }
 
@@ -119,9 +115,7 @@ impl Link {
 }
 
 pub fn find_links(node: NodeRef) -> Vec<Link> {
-    let links = find_elements(node, |_| true).filter_map(Link::from_node).collect();
-
-    links
+    find_elements(node, |_| true).filter_map(Link::from_node).collect()
 }
 
 #[cfg(test)]

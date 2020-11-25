@@ -84,8 +84,8 @@ impl ProjectLoader for V2Project {
         state.save(&state_file_path)?;
 
         Ok(Self {
-            root_path: root_path,
-            originals_path: originals_path,
+            root_path,
+            originals_path,
             state_file_path,
             config,
             state,
@@ -123,8 +123,8 @@ impl ProjectLoader for V2Project {
             .ok();
 
         Ok(Self {
-            root_path: root_path,
-            originals_path: originals_path,
+            root_path,
+            originals_path,
             state_file_path,
             config,
             state,

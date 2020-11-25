@@ -21,15 +21,11 @@ where
         while let Some(node) = self.queue.pop_front() {
             let mut is_match = false;
 
-            match node.data() {
-                NodeData::Element(data) => {
-                    let predicate = &self.predicate;
+            if let NodeData::Element(data) = node.data() {
+                let predicate = &self.predicate;
 
-                    is_match = predicate(data);
-                }
-
-                _ => {}
-            };
+                is_match = predicate(data);
+            }
 
             // Add child nodes to queue
             self.queue.extend(node.children());
@@ -60,7 +56,7 @@ pub fn find_elements_with_classes<'a>(
     find_classes: &[&'a str],
 ) -> impl Iterator<Item = NodeRef> + 'a {
     let find_name = find_name.into();
-    let find_classes: Vec<&'a str> = find_classes.iter().map(|s| *s).collect();
+    let find_classes: Vec<&'a str> = find_classes.iter().copied().collect();
 
     find_elements(node, move |data: &ElementData| {
         if data.name.local == find_name {

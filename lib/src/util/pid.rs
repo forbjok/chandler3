@@ -50,9 +50,7 @@ impl PidLock {
             return None;
         };
 
-        Some(Self {
-            path: path.to_path_buf(),
-        })
+        Some(Self { path })
     }
 }
 
@@ -64,13 +62,9 @@ impl Drop for PidLock {
 }
 
 fn process_exists(pid: Pid) -> bool {
-    use sysinfo::{System, SystemExt};
+    use sysinfo::{RefreshKind, System, SystemExt};
 
-    let sys = System::new_all();
+    let sys = System::new_with_specifics(RefreshKind::new().with_processes());
 
-    if let Some(_) = sys.get_process(pid) {
-        true
-    } else {
-        false
-    }
+    sys.get_process(pid).is_some()
 }

@@ -23,14 +23,14 @@ pub fn rebuild_thread(
     });
 
     let mut thread: Option<Box<dyn ThreadUpdater>> = None;
-    let mut files_processed: u32 = 0;
 
-    for file in original_files.iter() {
+    for (i, file) in original_files.iter().enumerate() {
         let _update_result = process_thread(config, &mut thread, file)?;
 
         // Report progress.
-        files_processed += 1;
-        ui_handler.event(&UiEvent::RebuildProgress { files_processed });
+        ui_handler.event(&UiEvent::RebuildProgress {
+            files_processed: i as u32,
+        });
     }
 
     // Report rebuild complete.

@@ -92,7 +92,7 @@ pub fn download_file(
         ui_handler.event(&UiEvent::DownloadFileProgress { bytes_downloaded: 0 });
 
         // Create file for writing.
-        let mut file = util::create_file(&path).map_err(|err| ChandlerError::CreateFile(err))?;
+        let mut file = util::create_file(&path).map_err(ChandlerError::CreateFile)?;
 
         let mut bytes_downloaded: usize = 0;
 
