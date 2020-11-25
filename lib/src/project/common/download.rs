@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
 use log::{debug, info};
 
 use crate::error::*;
@@ -12,6 +13,20 @@ use crate::util;
 use super::*;
 
 const BUF_SIZE: usize = 65535;
+
+lazy_static! {
+    static ref USER_AGENT: String = {
+        let os = os_info::get();
+
+        format!(
+            "Mozilla/5.0 ({} {}; {}) Chandler/{}",
+            os.os_type(),
+            os.version(),
+            os.bitness(),
+            env!("CARGO_PKG_VERSION")
+        )
+    };
+}
 
 #[derive(Debug)]
 pub enum DownloadResult {
@@ -36,7 +51,7 @@ pub fn download_file(
 
     let result = (|| {
         let client = reqwest::blocking::Client::builder()
-            .user_agent("Chandler3")
+            .user_agent(&*USER_AGENT)
             .build()
             .unwrap();
 
