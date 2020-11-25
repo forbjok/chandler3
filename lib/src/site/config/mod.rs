@@ -6,7 +6,6 @@ use std::str::FromStr;
 use serde_derive::Deserialize;
 
 use crate::config::*;
-use crate::error::*;
 use crate::util;
 
 use super::*;

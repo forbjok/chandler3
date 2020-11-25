@@ -73,7 +73,11 @@ fn process_link(
                     link.replace(&path);
 
                     // Make URL absolute.
-                    let absolute_url = thread_url.join(&href).unwrap();
+                    let absolute_url = thread_url.join(&href).map_err(|err| {
+                        ChandlerError::Other(
+                            format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into(),
+                        )
+                    })?;
 
                     return Ok(Some(LinkInfo {
                         url: absolute_url.into_string(),

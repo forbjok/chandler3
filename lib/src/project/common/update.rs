@@ -1,12 +1,9 @@
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-
 use chrono::{DateTime, Utc};
-use log::{debug, info};
+use log::info;
 
 use crate::error::*;
 use crate::project::ProjectConfig;
-use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
+use crate::threadupdater::ThreadUpdater;
 use crate::ui::*;
 
 use super::*;

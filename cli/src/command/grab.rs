@@ -26,8 +26,7 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
     })?;
     info!("Project path: {}", project_path.display());
 
-    let mut project = project::load_or_create(project_path, url)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+    let mut project = project::load_or_create(project_path, url)?;
 
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));

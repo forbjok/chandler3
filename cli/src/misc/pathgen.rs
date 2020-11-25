@@ -5,7 +5,8 @@ use crate::config::ResolvedCliConfig;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use chandler::{site::SiteResolver, ChandlerError};
+use chandler::error::*;
+use chandler::site::SiteResolver;
 
 lazy_static! {
     static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.]+)/(.+)/thread/(\d+)"#).unwrap();

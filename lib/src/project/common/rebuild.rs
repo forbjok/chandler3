@@ -1,9 +1,8 @@
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::error::*;
 use crate::project::*;
-use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
+use crate::threadupdater::ThreadUpdater;
 use crate::ui::*;
 
 use super::*;
@@ -27,7 +26,7 @@ pub fn rebuild_thread(
     let mut files_processed: u32 = 0;
 
     for file in original_files.iter() {
-        let update_result = process_thread(config, &mut thread, file)?;
+        let _update_result = process_thread(config, &mut thread, file)?;
 
         // Report progress.
         files_processed += 1;
@@ -38,6 +37,6 @@ pub fn rebuild_thread(
     ui_handler.event(&UiEvent::RebuildComplete);
 
     Ok(RebuildResult {
-        thread: thread.unwrap(),
+        thread: thread.ok_or_else(|| ChandlerError::Other("No thread produced during rebuild!".into()))?,
     })
 }

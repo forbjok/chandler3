@@ -53,7 +53,7 @@ pub fn download_file(
         let client = reqwest::blocking::Client::builder()
             .user_agent(&*USER_AGENT)
             .build()
-            .unwrap();
+            .map_err(|err| ChandlerError::Other(format!("Error building HTTP client: {}", err.to_string()).into()))?;
 
         // Download the thread HTML.
         let mut request = client.get(url);
@@ -122,12 +122,14 @@ pub fn download_file(
 
         let last_modified: Option<DateTime<Utc>> =
             if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
-                let value_str = value.to_str().unwrap();
+                if let Ok(value_str) = value.to_str() {
+                    let last_modified = DateTime::parse_from_rfc2822(value_str)
+                        .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
 
-                let last_modified = DateTime::parse_from_rfc2822(value_str)
-                    .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
-
-                Some(last_modified.into())
+                    Some(last_modified.into())
+                } else {
+                    None
+                }
             } else {
                 None
             };
@@ -174,7 +176,14 @@ pub fn download_linked_files(
         let link_info = unprocessed_links.remove(0);
 
         let path = path.join(&link_info.path);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
+
+        if let Some(parent_path) = path.parent() {
+            fs::create_dir_all(parent_path).map_err(|err| {
+                ChandlerError::Other(
+                    format!("Error creating path: {}: {}", parent_path.display(), err.to_string()).into(),
+                )
+            })?;
+        }
 
         if let Err(err) = download_file(&link_info.url, &path, None, ui_handler) {
             debug!("Error downloading link: {}", err.to_string());

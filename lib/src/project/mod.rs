@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Utc};
-
 pub mod common;
 mod v2;
 mod v3;
 
 use crate::error::*;
-use crate::threadupdater::{CreateThreadUpdater, ParserType};
+use crate::threadupdater::ParserType;
 use crate::ui::*;
 
 #[derive(Clone, Copy, Debug)]

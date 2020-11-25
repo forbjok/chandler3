@@ -3,6 +3,7 @@ use chandler::ui::*;
 pub struct NullUiHandler;
 
 impl NullUiHandler {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self
     }

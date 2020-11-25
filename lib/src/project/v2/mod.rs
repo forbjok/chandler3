@@ -8,7 +8,6 @@ mod config;
 mod state;
 
 use crate::error::*;
-use crate::html;
 use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
 use crate::ui::*;
 use crate::util::pid::PidLock;
@@ -28,14 +27,12 @@ const PID_FILE_NAME: &str = "chandler.pid";
 
 pub struct V2Project {
     root_path: PathBuf,
-    project_path: PathBuf,
-    config_file_path: PathBuf,
     state_file_path: PathBuf,
     originals_path: PathBuf,
     config: cfg::ProjectConfig,
     state: st::ProjectState,
     thread: Option<Box<dyn ThreadUpdater>>,
-    pidlock: PidLock,
+    _pidlock: PidLock,
 }
 
 impl ProjectLoader for V2Project {
@@ -88,14 +85,12 @@ impl ProjectLoader for V2Project {
 
         Ok(Self {
             root_path: root_path,
-            project_path: project_path,
             originals_path: originals_path,
-            config_file_path,
             state_file_path,
             config,
             state,
             thread: None,
-            pidlock,
+            _pidlock: pidlock,
         })
     }
 
@@ -129,14 +124,12 @@ impl ProjectLoader for V2Project {
 
         Ok(Self {
             root_path: root_path,
-            project_path: project_path,
             originals_path: originals_path,
-            config_file_path,
             state_file_path,
             config,
             state,
             thread,
-            pidlock,
+            _pidlock: pidlock,
         })
     }
 
@@ -166,7 +159,7 @@ impl V2Project {
 
 impl Project for V2Project {
     fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError> {
-        let mut update_result = update_thread(
+        let update_result = update_thread(
             &self.get_config(),
             &mut self.thread,
             self.state.last_modified,
@@ -240,7 +233,7 @@ impl Project for V2Project {
         let files = get_html_files(&self.originals_path)
             .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
 
-        let result = rebuild_thread(&self.get_config(), &files, ui_handler)?;
+        let _result = rebuild_thread(&self.get_config(), &files, ui_handler)?;
 
         // Write rebuilt thread to file.
         self.write_thread()?;

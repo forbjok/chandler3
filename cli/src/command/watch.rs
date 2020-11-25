@@ -52,8 +52,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_seconds = interval as u64;
 
-    let mut project = project::load_or_create(project_path, &url)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+    let mut project = project::load_or_create(project_path, &url)?;
 
     let interval_duration = chrono::Duration::seconds(interval);
 
