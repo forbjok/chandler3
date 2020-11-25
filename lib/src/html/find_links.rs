@@ -185,9 +185,9 @@ mod tests {
     <head></head>
     <body>
         <div>
-            <a data-original-href="a" href="A"></a>
-            <img data-original-src="images/file.png" src="IMAGES/FILE.PNG">
-            <link data-original-href="css/style.css" href="CSS/STYLE.CSS" rel="stylesheet">
+            <a href="A" data-original-href="a"></a>
+            <img src="IMAGES/FILE.PNG" data-original-src="images/file.png">
+            <link href="CSS/STYLE.CSS" rel="stylesheet" data-original-href="css/style.css">
         </div>
     </body>
 </html>
