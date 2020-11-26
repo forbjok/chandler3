@@ -17,18 +17,17 @@ lazy_static! {
     static ref DEFAULT_CONFIG_DIR_PATH: PathBuf = dirs::config_dir().unwrap().join(CONFIG_DIR);
     static ref DEFAULT_CONFIG_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(CONFIG_FILENAME);
     static ref DEFAULT_SITES_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(SITES_FILENAME);
-    static ref DEFAULT_SAVE_TO_PATH: PathBuf = dirs::download_dir().unwrap().join("chandler3");
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CliConfig {
-    pub save_to_path: Option<PathBuf>,
+    pub download_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
 pub struct ResolvedCliConfig {
-    pub save_to_path: PathBuf,
+    pub download_path: PathBuf,
 }
 
 impl CliConfig {
@@ -50,12 +49,17 @@ impl CliConfig {
     }
 
     pub fn resolve(self) -> Result<ResolvedCliConfig, String> {
-        let save_to_path = self
-            .save_to_path
-            .map(util::normalize_path)
-            .unwrap_or_else(|| (*DEFAULT_SAVE_TO_PATH).clone());
+        let download_path = if let Some(download_path) = self.download_path {
+            util::normalize_path(download_path)
+        } else {
+            if let Some(os_download_path) = dirs::download_dir() {
+                os_download_path.join("chandler3")
+            } else {
+                return Err("No default download directory found. A download path must be specified in the Chandler config file.".to_owned());
+            }
+        };
 
-        Ok(ResolvedCliConfig { save_to_path })
+        Ok(ResolvedCliConfig { download_path })
     }
 }
 

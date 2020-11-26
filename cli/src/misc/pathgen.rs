@@ -20,7 +20,7 @@ pub fn generate_destination_path(
     let site_info = site_resolver.resolve_site(url)?;
 
     if let Some(site_info) = site_info {
-        Ok(cfg.save_to_path.join(site_info.name).join(site_info.path))
+        Ok(cfg.download_path.join(site_info.name).join(site_info.path))
     } else {
         let cap = REGEX_SPLIT_URL
             .captures(url)
@@ -30,7 +30,7 @@ pub fn generate_destination_path(
         let board = &cap[2];
         let thread = &cap[3];
 
-        let path = cfg.save_to_path.join("unknown").join(host).join(board).join(thread);
+        let path = cfg.download_path.join("unknown").join(host).join(board).join(thread);
 
         Ok(path)
     }
