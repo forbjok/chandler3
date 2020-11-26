@@ -40,6 +40,9 @@ impl ChandlerUiHandler for StderrUiHandler {
             UiEvent::UpdateStart { thread_url, .. } => {
                 eprintln!("Updating thread from {}...", thread_url);
             }
+            UiEvent::UpdateError { description } => {
+                eprintln!("Update thread failed: {}", description);
+            }
             UiEvent::UpdateComplete {
                 was_updated,
                 new_post_count,

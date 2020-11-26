@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 
@@ -54,8 +53,6 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let mut project = project::load_or_create(project_path, &url)?;
 
-    let interval_duration = chrono::Duration::seconds(interval);
-
     let ui_cancel = cancel.clone();
     let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {
         // If cancellation has been requested, break out immediately.
@@ -66,51 +63,67 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
         false
     }));
 
-    let mut next_update_at: DateTime<Utc>;
-
     'watch: loop {
-        let update_result = project
-            .update(&mut ui_handler)
-            .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+        let update_result = {
+            let result = project.update(&mut ui_handler);
+
+            if let Err(ChandlerError::Download(_)) = &result {
+                // Wait for retry.
+                if !waiting_bar(interval_seconds, "seconds until retry...", &cancel) {
+                    // If user requested cancellation, break out of the loop.
+                    break 'watch;
+                }
+
+                continue 'watch;
+            }
+
+            result.map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?
+        };
 
         // Save changes to disk.
         project.save()?;
 
         // If the thread is dead, break out of loop.
         if update_result.is_dead {
-            println!("Thread is dead.");
-            break;
+            eprintln!("Thread is dead.");
+            break 'watch;
         }
 
-        // Calculate next update time.
-        next_update_at = Utc::now() + interval_duration;
-
-        info!("Next update at {}.", next_update_at);
-
-        let mut seconds_passed: u64 = 0;
-
-        let waiting_bar = ProgressBar::new(interval_seconds);
-        waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
-        waiting_bar.set_prefix("Waiting");
-        waiting_bar.set_message("seconds until update...");
-        waiting_bar.set_position(interval_seconds);
-
-        // Wait for until it's time for the next update.
-        while Utc::now() < next_update_at {
-            // If cancellation has been requested, break out immediately.
-            if cancel.load(Ordering::SeqCst) {
-                break 'watch;
-            }
-
-            std::thread::sleep(ONE_SECOND);
-
-            // Update waiting progress.
-            seconds_passed += 1;
-            waiting_bar.set_position(interval_seconds - seconds_passed);
+        // Wait for next update.
+        if !waiting_bar(interval_seconds, "seconds until update...", &cancel) {
+            // If user requested cancellation, break out of the loop.
+            break 'watch;
         }
-
-        waiting_bar.finish_and_clear();
     }
 
     Ok(())
+}
+
+/// Wait with progress indicator.
+fn waiting_bar(wait_seconds: u64, message: &str, cancel: &Arc<AtomicBool>) -> bool {
+    let mut seconds_passed: u64 = 0;
+
+    let waiting_bar = ProgressBar::new(wait_seconds);
+    waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
+    waiting_bar.set_prefix("Waiting");
+    waiting_bar.set_message(message);
+    waiting_bar.set_position(wait_seconds);
+
+    // Wait until the specified time has passed.
+    while seconds_passed < wait_seconds {
+        // If cancellation has been requested, break out immediately.
+        if cancel.load(Ordering::SeqCst) {
+            return false;
+        }
+
+        std::thread::sleep(ONE_SECOND);
+
+        // Update waiting progress.
+        seconds_passed += 1;
+        waiting_bar.set_position(wait_seconds - seconds_passed);
+    }
+
+    waiting_bar.finish_and_clear();
+
+    true
 }

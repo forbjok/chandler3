@@ -39,6 +39,9 @@ pub enum UiEvent {
         thread_url: String,
         destination: PathBuf,
     },
+    UpdateError {
+        description: String,
+    },
     UpdateComplete {
         was_updated: bool,
         new_post_count: u32,
