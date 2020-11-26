@@ -51,12 +51,13 @@ impl CliConfig {
     pub fn resolve(self) -> Result<ResolvedCliConfig, String> {
         let download_path = if let Some(download_path) = self.download_path {
             util::normalize_path(download_path)
+        } else if let Some(os_download_path) = dirs::download_dir() {
+            os_download_path.join("chandler3")
         } else {
-            if let Some(os_download_path) = dirs::download_dir() {
-                os_download_path.join("chandler3")
-            } else {
-                return Err("No default download directory found. A download path must be specified in the Chandler config file.".to_owned());
-            }
+            return Err(
+                "No default download directory found. A download path must be specified in the Chandler config file."
+                    .to_owned(),
+            );
         };
 
         Ok(ResolvedCliConfig { download_path })
