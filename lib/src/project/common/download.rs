@@ -1,10 +1,9 @@
-use std::borrow::Cow;
 use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::{error, info};
 
 use crate::error::*;
 use crate::project::ProjectState;
@@ -177,6 +176,7 @@ pub fn download_linked_files(
 
         let link_info = new_links.remove(0);
 
+        let url = &link_info.url;
         let path = download_path.join(&link_info.path);
 
         if let Some(parent_path) = path.parent() {
@@ -187,17 +187,36 @@ pub fn download_linked_files(
             })?;
         }
 
-        if let Err(err) = download_file(&link_info.url, &path, None, ui_handler) {
-            debug!("Error downloading link: {}", err.to_string());
-
-            failed_links.push(link_info);
-
-            files_failed += 1;
-        } else {
-            files_downloaded += 1;
-        }
+        let success = match download_file(url, &path, None, ui_handler) {
+            Ok(r) => match r {
+                DownloadResult::Success { .. } => true,
+                DownloadResult::NotModified => true,
+                DownloadResult::NotFound => {
+                    error!("File not found: {}", url);
+                    false
+                }
+                DownloadResult::OtherHttpError {
+                    status_code,
+                    description,
+                } => {
+                    error!("Server returned HTTP error: {} {}", status_code, description);
+                    false
+                }
+            },
+            Err(err) => {
+                error!("Error downloading link: {}", err.to_string());
+                false
+            }
+        };
 
         files_processed += 1;
+
+        if success {
+            files_downloaded += 1;
+        } else {
+            failed_links.push(link_info);
+            files_failed += 1;
+        }
 
         // Report download progress.
         ui_handler.event(&UiEvent::DownloadProgress { files_processed });
