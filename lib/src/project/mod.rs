@@ -1,13 +1,32 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
+use log::info;
+
 pub mod common;
 mod v2;
 mod v3;
 
+use common::LinkInfo;
+
 use crate::error::*;
-use crate::threadupdater::ParserType;
+use crate::threadupdater::{ParserType, ThreadUpdater};
 use crate::ui::*;
+
+lazy_static! {
+    static ref DEFAULT_DOWNLOAD_EXTENSIONS: HashSet<String> = vec![
+        "ico".to_owned(),
+        "css".to_owned(),
+        "png".to_owned(),
+        "jpg".to_owned(),
+        "gif".to_owned(),
+        "webm".to_owned(),
+    ]
+    .into_iter()
+    .collect();
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum ProjectFormat {
@@ -23,12 +42,18 @@ pub struct ProjectUpdateResult {
     pub new_file_count: u32,
 }
 
-pub struct ProjectConfig {
-    pub download_root_path: PathBuf,
+pub struct ProjectState {
+    pub root_path: PathBuf,
+    pub thread_file_path: PathBuf,
     pub originals_path: PathBuf,
     pub thread_url: String,
     pub download_extensions: HashSet<String>,
     pub parser: ParserType,
+    pub thread: Option<Box<dyn ThreadUpdater>>,
+    pub last_modified: Option<DateTime<Utc>>,
+    pub is_dead: bool,
+    pub new_links: Vec<LinkInfo>,
+    pub failed_links: Vec<LinkInfo>,
 }
 
 pub trait Project {
@@ -36,8 +61,6 @@ pub trait Project {
     fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
-
-    fn get_config(&self) -> ProjectConfig;
 }
 
 pub trait ProjectLoader {
@@ -46,6 +69,19 @@ pub trait ProjectLoader {
     fn create(path: &Path, url: &str) -> Result<Self::P, ChandlerError>;
     fn load(path: &Path) -> Result<Self::P, ChandlerError>;
     fn exists_at(path: &Path) -> bool;
+}
+
+impl ProjectState {
+    pub fn write_thread(&self) -> Result<(), ChandlerError> {
+        let thread_file_path = self.root_path.join(&self.thread_file_path);
+        info!("Writing thread HTML: {}", thread_file_path.display());
+
+        if let Some(thread) = self.thread.as_ref() {
+            thread.write_file(&thread_file_path)?;
+        }
+
+        Ok(())
+    }
 }
 
 pub fn exists_at(path: impl AsRef<Path>) -> bool {

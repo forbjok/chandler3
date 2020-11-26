@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::error::*;
 use crate::project::*;
 use crate::threadupdater::ThreadUpdater;
@@ -12,20 +10,22 @@ pub struct RebuildResult {
 }
 
 pub fn rebuild_thread(
-    config: &ProjectConfig,
-    original_files: &[PathBuf],
+    state: &mut ProjectState,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<RebuildResult, ChandlerError> {
+    let original_files = get_html_files(&state.originals_path)
+        .map_err(|err| ChandlerError::Other(format!("Error getting HTML files: {}", err).into()))?;
+
     // Report rebuild start.
     ui_handler.event(&UiEvent::RebuildStart {
-        path: config.download_root_path.to_path_buf(),
+        path: state.root_path.to_path_buf(),
         file_count: original_files.len() as u32,
     });
 
-    let mut thread: Option<Box<dyn ThreadUpdater>> = None;
+    let thread: Option<Box<dyn ThreadUpdater>> = None;
 
     for (i, file) in original_files.iter().enumerate() {
-        let _update_result = process_thread(config, &mut thread, file)?;
+        let _update_result = process_thread(state, file)?;
 
         // Report progress.
         ui_handler.event(&UiEvent::RebuildProgress {

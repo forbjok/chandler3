@@ -2,18 +2,14 @@ use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use log::info;
-
-mod config;
-mod state;
+mod format;
 
 use crate::error::*;
-use crate::threadupdater::{CreateThreadUpdater, ThreadUpdater};
+use crate::threadupdater::CreateThreadUpdater;
 use crate::ui::*;
 use crate::util::pid::PidLock;
 
-use self::config as cfg;
-use self::state as st;
+use self::format as pf;
 
 use super::common::*;
 use super::*;
@@ -26,12 +22,8 @@ const THREAD_FILE_NAME: &str = "thread.html";
 const PID_FILE_NAME: &str = "chandler.pid";
 
 pub struct V2Project {
-    root_path: PathBuf,
+    state: ProjectState,
     state_file_path: PathBuf,
-    originals_path: PathBuf,
-    config: cfg::ProjectConfig,
-    state: st::ProjectState,
-    thread: Option<Box<dyn ThreadUpdater>>,
     _pidlock: PidLock,
 }
 
@@ -42,23 +34,6 @@ impl ProjectLoader for V2Project {
         let root_path = path.to_path_buf();
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
-
-        let config = cfg::ProjectConfig {
-            parser: cfg::Parser::FourChan,
-            url: url.to_owned(),
-            download_extensions: vec![
-                "ico".to_owned(),
-                "css".to_owned(),
-                "png".to_owned(),
-                "jpg".to_owned(),
-                "gif".to_owned(),
-                "webm".to_owned(),
-            ]
-            .into_iter()
-            .collect(),
-        };
-
-        let state: st::ProjectState = Default::default();
 
         fs::create_dir_all(&project_path).map_err(|err| {
             ChandlerError::CreateProject(Cow::Owned(format!("Cannot create project directory: {}", err)))
@@ -78,20 +53,35 @@ impl ProjectLoader for V2Project {
 
         let config_file_path = project_path.join(CONFIG_FILE_NAME);
         let state_file_path = project_path.join(STATE_FILE_NAME);
+        let thread_file_path = root_path.join(THREAD_FILE_NAME);
 
-        // Save initial project config and state
-        config.save(&config_file_path)?;
-        state.save(&state_file_path)?;
-
-        Ok(Self {
+        let state = ProjectState {
             root_path,
+            thread_file_path,
             originals_path,
-            state_file_path,
-            config,
-            state,
+            thread_url: url.to_owned(),
+            download_extensions: (*DEFAULT_DOWNLOAD_EXTENSIONS).clone(),
+            parser: ParserType::FourChan,
             thread: None,
+            is_dead: false,
+            last_modified: None,
+            new_links: Vec::new(),
+            failed_links: Vec::new(),
+        };
+
+        // Save initial project config and state.
+        pf::Config::from(&state).save(&config_file_path)?;
+        pf::State::default().save(&state_file_path)?;
+
+        let project = Self {
+            state,
+            state_file_path,
             _pidlock: pidlock,
-        })
+        };
+
+        project.save()?;
+
+        Ok(project)
     }
 
     fn load(path: &Path) -> Result<Self::P, ChandlerError> {
@@ -110,25 +100,57 @@ impl ProjectLoader for V2Project {
 
         let config_file_path = project_path.join(CONFIG_FILE_NAME);
         let state_file_path = project_path.join(STATE_FILE_NAME);
+        let thread_file_path = root_path.join(THREAD_FILE_NAME);
 
-        // Load project config and state
-        let config = cfg::ProjectConfig::load(&config_file_path)?;
-        let state = st::ProjectState::load(&state_file_path)?;
+        // Load project config and state.
+        let config = pf::Config::load(&config_file_path)?;
+        let state = pf::State::load(&state_file_path)?;
 
         let parser: ParserType = config.parser.into();
 
-        // Try to load current thread
+        let thread_url = url::Url::parse(&config.url)
+            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+        // Try to load current thread.
         let thread = parser
             .create_thread_updater_from(&root_path.join(THREAD_FILE_NAME))
             .ok();
 
-        Ok(Self {
+        // Pull failed (in V2 projects, this includes unprocessed) links out of project state.
+        let failed_links: Vec<LinkInfo> = state
+            .links
+            .failed
+            .iter()
+            .filter_map(|url| {
+                if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
+                    Some((url, path))
+                } else {
+                    None
+                }
+            })
+            .map(|(url, path)| LinkInfo {
+                url: url.clone(),
+                path: path.clone(),
+            })
+            .collect();
+
+        let state = ProjectState {
             root_path,
+            thread_file_path,
             originals_path,
-            state_file_path,
-            config,
-            state,
+            thread_url: config.url,
+            download_extensions: config.download_extensions,
+            parser,
             thread,
+            is_dead: false,
+            last_modified: None,
+            new_links: Vec::new(),
+            failed_links,
+        };
+
+        Ok(Self {
+            state,
+            state_file_path,
             _pidlock: pidlock,
         })
     }
@@ -140,18 +162,7 @@ impl ProjectLoader for V2Project {
 
 impl V2Project {
     pub fn save_state(&self) -> Result<(), ChandlerError> {
-        self.state.save(&self.state_file_path)?;
-
-        Ok(())
-    }
-
-    pub fn write_thread(&self) -> Result<(), ChandlerError> {
-        let thread_file_path = self.root_path.join(THREAD_FILE_NAME);
-        info!("Writing thread HTML: {}", thread_file_path.display());
-
-        if let Some(thread) = self.thread.as_ref() {
-            thread.write_file(&thread_file_path)?;
-        }
+        pf::State::from(&self.state).save(&self.state_file_path)?;
 
         Ok(())
     }
@@ -159,84 +170,36 @@ impl V2Project {
 
 impl Project for V2Project {
     fn update(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<ProjectUpdateResult, ChandlerError> {
-        let update_result = update_thread(
-            &self.get_config(),
-            &mut self.thread,
-            self.state.last_modified,
-            ui_handler,
-        )?;
-
-        let new_file_count = update_result.new_links.len() as u32;
-
-        // Update last modified date in project state.
-        self.state.last_modified = update_result.last_modified;
-
-        // Add new links to project state.
-        self.state
-            .links
-            .failed
-            .extend(update_result.new_links.into_iter().map(|li| li.url));
+        let update_result = update_thread(&mut self.state, ui_handler)?;
 
         // Write thread HTML.
-        self.write_thread()?;
+        self.state.write_thread()?;
 
         // Download links.
         self.download_links(ui_handler)?;
 
         Ok(ProjectUpdateResult {
             was_updated: update_result.was_updated,
-            is_dead: update_result.is_dead,
+            is_dead: self.state.is_dead,
             new_post_count: update_result.new_post_count,
-            new_file_count,
+            new_file_count: update_result.new_link_count,
         })
     }
 
     fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
-        let thread_url = url::Url::parse(&self.config.url)
-            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
-
-        // Pull failed (in V2 projects, this includes unprocessed) links out of project state.
-        let mut new_links: Vec<LinkInfo> = self
-            .state
-            .links
-            .failed
-            .drain(..)
-            .filter_map(|url| {
-                if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
-                    Some((url, path))
-                } else {
-                    None
-                }
-            })
-            .map(|(url, path)| LinkInfo { url, path })
-            .collect();
-
-        let mut failed_links: Vec<LinkInfo> = Vec::new();
-
         // Download linked files.
-        download_linked_files(&self.root_path, &mut new_links, &mut failed_links, ui_handler)?;
+        download_linked_files(&mut self.state, ui_handler)?;
 
-        // Add remaining new links to failed link, because this is how it
-        // was handled in V2 projects.
-        failed_links.append(&mut new_links);
-
-        // Re-add remaining failed links.
-        self.state
-            .links
-            .failed
-            .extend(failed_links.into_iter().map(|li| li.url));
+        self.save_state()?;
 
         Ok(())
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
-        let files = get_html_files(&self.originals_path)
-            .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Error getting HTML files: {}", err))))?;
-
-        let _result = rebuild_thread(&self.get_config(), &files, ui_handler)?;
+        let _result = rebuild_thread(&mut self.state, ui_handler)?;
 
         // Write rebuilt thread to file.
-        self.write_thread()?;
+        self.state.write_thread()?;
 
         Ok(())
     }
@@ -245,15 +208,5 @@ impl Project for V2Project {
         self.save_state()?;
 
         Ok(())
-    }
-
-    fn get_config(&self) -> ProjectConfig {
-        ProjectConfig {
-            download_root_path: self.root_path.clone(),
-            originals_path: self.originals_path.clone(),
-            thread_url: self.config.url.clone(),
-            download_extensions: self.config.download_extensions.clone(),
-            parser: self.config.parser.into(),
-        }
     }
 }

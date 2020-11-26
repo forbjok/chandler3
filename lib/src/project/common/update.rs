@@ -1,9 +1,8 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use log::info;
 
 use crate::error::*;
-use crate::project::ProjectConfig;
-use crate::threadupdater::ThreadUpdater;
+use crate::project::ProjectState;
 use crate::ui::*;
 
 use super::*;
@@ -11,16 +10,12 @@ use super::*;
 #[derive(Debug)]
 pub struct UpdateResult {
     pub was_updated: bool,
-    pub last_modified: Option<DateTime<Utc>>,
-    pub is_dead: bool,
-    pub new_links: Vec<LinkInfo>,
     pub new_post_count: u32,
+    pub new_link_count: u32,
 }
 
 pub fn update_thread(
-    config: &ProjectConfig,
-    original_thread: &mut Option<Box<dyn ThreadUpdater>>,
-    last_modified: Option<DateTime<Utc>>,
+    state: &mut ProjectState,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<UpdateResult, ChandlerError> {
     // Get unix timestamp
@@ -29,50 +24,47 @@ pub fn update_thread(
 
     // Construct filename
     let filename = format!("{}.html", unix_now);
-    let thread_file_path = config.originals_path.join(&filename);
+    let new_thread_file_path = state.originals_path.join(&filename);
 
-    let url = &config.thread_url;
+    let url = &state.thread_url;
 
     info!("BEGIN UPDATE: {}", url);
 
     ui_handler.event(&UiEvent::UpdateStart {
         thread_url: url.to_owned(),
-        destination: config.download_root_path.to_path_buf(),
+        destination: state.root_path.to_path_buf(),
     });
 
     // Download new thread HTML.
-    let result = download_file(&url, &thread_file_path, last_modified, ui_handler)?;
+    let result = download_file(&url, &new_thread_file_path, state.last_modified, ui_handler)?;
 
     let result = match result {
         DownloadResult::Success { last_modified } => {
             // Process the new HTML.
-            let process_result = process_thread(config, original_thread, &thread_file_path)?;
+            let process_result = process_thread(state, &new_thread_file_path)?;
 
             let update_result = process_result.update_result;
 
+            state.is_dead = update_result.is_archived;
+            state.last_modified = last_modified;
+
             Ok(UpdateResult {
                 was_updated: true,
-                last_modified,
-                is_dead: update_result.is_archived,
-                new_links: process_result.new_unprocessed_links,
                 new_post_count: update_result.new_post_count,
+                new_link_count: update_result.new_links.len() as u32,
             })
         }
         DownloadResult::NotModified => Ok(UpdateResult {
             was_updated: false,
-            last_modified: None,
-            is_dead: false,
-            new_links: Vec::new(),
             new_post_count: 0,
+            new_link_count: 0,
         }),
         DownloadResult::NotFound => {
             // If thread returned 404, mark it as dead.
             Ok(UpdateResult {
                 was_updated: false,
-                last_modified: None,
-                is_dead: true,
-                new_links: Vec::new(),
                 new_post_count: 0,
+                new_link_count: 0,
             })
         }
         DownloadResult::Error {
@@ -90,7 +82,7 @@ pub fn update_thread(
         ui_handler.event(&UiEvent::UpdateComplete {
             was_updated: result.was_updated,
             new_post_count: result.new_post_count,
-            new_file_count: result.new_links.len() as u32,
+            new_file_count: result.new_link_count,
         });
     }
 

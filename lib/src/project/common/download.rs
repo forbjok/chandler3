@@ -7,10 +7,9 @@ use lazy_static::lazy_static;
 use log::{debug, info};
 
 use crate::error::*;
+use crate::project::ProjectState;
 use crate::ui::*;
 use crate::util;
-
-use super::*;
 
 const BUF_SIZE: usize = 65535;
 
@@ -149,19 +148,23 @@ pub fn download_file(
 
 /// Download all links for this project.
 pub fn download_linked_files(
-    path: &Path,
-    unprocessed_links: &mut Vec<LinkInfo>,
-    failed_links: &mut Vec<LinkInfo>,
+    state: &mut ProjectState,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
+    state.new_links.append(&mut state.failed_links);
+
     // Report download start.
     ui_handler.event(&UiEvent::DownloadStart {
-        file_count: unprocessed_links.len() as u32,
+        file_count: state.new_links.len() as u32,
     });
 
     let mut files_processed: u32 = 0;
     let mut files_downloaded: u32 = 0;
     let mut files_failed: u32 = 0;
+
+    let download_path = &state.originals_path;
+    let new_links = &mut state.new_links;
+    let failed_links = &mut state.failed_links;
 
     loop {
         // If cancellation has been requested, break out immediately.
@@ -169,13 +172,13 @@ pub fn download_linked_files(
             break;
         }
 
-        if unprocessed_links.is_empty() {
+        if new_links.is_empty() {
             break;
         }
 
-        let link_info = unprocessed_links.remove(0);
+        let link_info = new_links.remove(0);
 
-        let path = path.join(&link_info.path);
+        let path = download_path.join(&link_info.path);
 
         if let Some(parent_path) = path.parent() {
             fs::create_dir_all(parent_path).map_err(|err| {
