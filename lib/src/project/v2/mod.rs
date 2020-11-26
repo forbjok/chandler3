@@ -2,6 +2,9 @@ use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use log::debug;
+use url::Url;
+
 mod format;
 
 use crate::error::*;
@@ -25,6 +28,19 @@ pub struct V2Project {
     state: ProjectState,
     state_file_path: PathBuf,
     _pidlock: PidLock,
+}
+
+struct V2LinkPathGenerator {
+    thread_url: Url,
+}
+
+impl V2LinkPathGenerator {
+    pub fn new(thread_url: &str) -> Result<Self, ChandlerError> {
+        let thread_url = Url::parse(thread_url)
+            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+        Ok(Self { thread_url })
+    }
 }
 
 impl ProjectLoader for V2Project {
@@ -55,6 +71,8 @@ impl ProjectLoader for V2Project {
         let state_file_path = project_path.join(STATE_FILE_NAME);
         let thread_file_path = root_path.join(THREAD_FILE_NAME);
 
+        let link_path_generator = V2LinkPathGenerator::new(url)?;
+
         let state = ProjectState {
             root_path,
             thread_file_path,
@@ -62,6 +80,7 @@ impl ProjectLoader for V2Project {
             thread_url: url.to_owned(),
             download_extensions: (*DEFAULT_DOWNLOAD_EXTENSIONS).clone(),
             parser: ParserType::FourChan,
+            link_path_generator: Box::new(link_path_generator),
             thread: None,
             is_dead: false,
             last_modified: None,
@@ -107,9 +126,7 @@ impl ProjectLoader for V2Project {
         let state = pf::State::load(&state_file_path)?;
 
         let parser: ParserType = config.parser.into();
-
-        let thread_url = url::Url::parse(&config.url)
-            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+        let link_path_generator = V2LinkPathGenerator::new(&config.url)?;
 
         // Try to load current thread.
         let thread = parser
@@ -120,18 +137,15 @@ impl ProjectLoader for V2Project {
         let failed_links: Vec<LinkInfo> = state
             .links
             .failed
-            .iter()
+            .into_iter()
             .filter_map(|url| {
-                if let Ok(Some(path)) = local_path_from_url(&url, &thread_url) {
+                if let Ok(Some(path)) = link_path_generator.generate_path(&url) {
                     Some((url, path))
                 } else {
                     None
                 }
             })
-            .map(|(url, path)| LinkInfo {
-                url: url.clone(),
-                path: path.clone(),
-            })
+            .map(|(url, path)| LinkInfo { url, path })
             .collect();
 
         let state = ProjectState {
@@ -141,6 +155,7 @@ impl ProjectLoader for V2Project {
             thread_url: config.url,
             download_extensions: config.download_extensions,
             parser,
+            link_path_generator: Box::new(link_path_generator),
             thread,
             is_dead: false,
             last_modified: None,
@@ -161,7 +176,7 @@ impl ProjectLoader for V2Project {
 }
 
 impl V2Project {
-    pub fn save_state(&self) -> Result<(), ChandlerError> {
+    fn save_state(&self) -> Result<(), ChandlerError> {
         pf::State::from(&self.state).save(&self.state_file_path)?;
 
         Ok(())
@@ -208,5 +223,21 @@ impl Project for V2Project {
         self.save_state()?;
 
         Ok(())
+    }
+}
+
+impl LinkPathGenerator for V2LinkPathGenerator {
+    fn generate_path(&self, url: &str) -> Result<Option<String>, ChandlerError> {
+        let url = self
+            .thread_url
+            .join(url)
+            .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
+
+        if let Some(host) = url.host_str() {
+            Ok(Some(format!("{}{}", host, url.path())))
+        } else {
+            debug!("No host found in url: {}", url);
+            Ok(None)
+        }
     }
 }

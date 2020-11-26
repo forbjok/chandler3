@@ -81,7 +81,7 @@ impl From<&ProjectState> for Config {
 impl From<&ProjectState> for State {
     fn from(state: &ProjectState) -> Self {
         Self {
-            last_modified: state.last_modified.clone(),
+            last_modified: state.last_modified,
             is_dead: state.is_dead,
             links: Links {
                 new: state

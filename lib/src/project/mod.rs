@@ -49,11 +49,16 @@ pub struct ProjectState {
     pub thread_url: String,
     pub download_extensions: HashSet<String>,
     pub parser: ParserType,
+    pub link_path_generator: Box<dyn LinkPathGenerator>,
     pub thread: Option<Box<dyn ThreadUpdater>>,
     pub last_modified: Option<DateTime<Utc>>,
     pub is_dead: bool,
     pub new_links: Vec<LinkInfo>,
     pub failed_links: Vec<LinkInfo>,
+}
+
+pub trait LinkPathGenerator {
+    fn generate_path(&self, url: &str) -> Result<Option<String>, ChandlerError>;
 }
 
 pub trait Project {
