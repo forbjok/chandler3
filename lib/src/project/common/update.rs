@@ -45,7 +45,10 @@ pub fn update_thread(
 
             let update_result = process_result.update_result;
 
+            // If thread is archived, mark it as dead.
             state.is_dead = update_result.is_archived;
+
+            // Update last modified date in project state.
             state.last_modified = last_modified;
 
             Ok(UpdateResult {
@@ -61,6 +64,8 @@ pub fn update_thread(
         }),
         DownloadResult::NotFound => {
             // If thread returned 404, mark it as dead.
+            state.is_dead = true;
+
             Ok(UpdateResult {
                 was_updated: false,
                 new_post_count: 0,
