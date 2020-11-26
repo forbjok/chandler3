@@ -143,7 +143,7 @@ impl ProjectLoader for V3Project {
             link_path_generator: Box::new(link_path_generator),
             thread,
             is_dead: false,
-            last_modified: None,
+            last_modified: state.last_modified,
             new_links: state
                 .links
                 .new
