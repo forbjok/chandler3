@@ -4,13 +4,14 @@ mod grab;
 
 pub use grab::*;
 
-use chandler::ChandlerError;
+use chandler::{ChandlerError, DownloadError};
 
 #[derive(Debug)]
 pub enum CommandErrorKind {
     Arguments,
     Config,
     Other,
+    Network,
 }
 
 impl CommandErrorKind {
@@ -19,6 +20,7 @@ impl CommandErrorKind {
             Self::Arguments => 1,
             Self::Config => 2,
             Self::Other => 101,
+            Self::Network => 102,
         }
     }
 }
@@ -77,14 +79,14 @@ impl From<ChandlerError> for CommandError {
             ChandlerError::WriteFile(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error writing file: {}", err))
             }
-            ChandlerError::Download(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
-            ChandlerError::DownloadHttpStatus {
-                status_code,
-                description,
-            } => CommandError::new(
-                CommandErrorKind::Other,
-                format!("Download HTTP error: {} {}", status_code, description),
-            ),
+            ChandlerError::Download(err) => match err {
+                DownloadError::Http { code, description } => CommandError::new(
+                    CommandErrorKind::Other,
+                    format!("Download HTTP error: {} {}", code, description),
+                ),
+                DownloadError::Network(err) => CommandError::new(CommandErrorKind::Network, err.to_string()),
+                DownloadError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
+            },
             ChandlerError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
         }
     }

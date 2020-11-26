@@ -5,6 +5,13 @@ use std::io;
 use crate::util;
 
 #[derive(Debug)]
+pub enum DownloadError {
+    Http { code: u16, description: Cow<'static, str> },
+    Network(Cow<'static, str>),
+    Other(Cow<'static, str>),
+}
+
+#[derive(Debug)]
 pub enum ChandlerError {
     CreateProject(Cow<'static, str>),
     LoadProject(Cow<'static, str>),
@@ -16,11 +23,7 @@ pub enum ChandlerError {
     CreateFile(util::FileError),
     ReadFile(io::Error),
     WriteFile(io::Error),
-    Download(Cow<'static, str>),
-    DownloadHttpStatus {
-        status_code: u16,
-        description: Cow<'static, str>,
-    },
+    Download(DownloadError),
     Other(Cow<'static, str>),
 }
 
@@ -37,11 +40,11 @@ impl fmt::Display for ChandlerError {
             Self::CreateFile(err) => write!(f, "{}", err),
             Self::ReadFile(err) => write!(f, "{}", err),
             Self::WriteFile(err) => write!(f, "{}", err),
-            Self::Download(err) => write!(f, "{}", err),
-            Self::DownloadHttpStatus {
-                status_code,
-                description,
-            } => write!(f, "{} {}", status_code, description),
+            Self::Download(err) => match err {
+                DownloadError::Http { code, description } => write!(f, "{} {}", code, description),
+                DownloadError::Network(err) => write!(f, "{}", err),
+                DownloadError::Other(err) => write!(f, "{}", err),
+            },
             Self::Other(err) => write!(f, "{}", err),
         }
     }

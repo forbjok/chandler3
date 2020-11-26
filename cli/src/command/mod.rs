@@ -8,7 +8,7 @@ pub use grab::*;
 pub use rebuild::*;
 pub use watch::*;
 
-use chandler::ChandlerError;
+use chandler::{ChandlerError, DownloadError};
 
 #[derive(Debug)]
 pub enum CommandErrorKind {
@@ -81,14 +81,13 @@ impl From<ChandlerError> for CommandError {
             ChandlerError::WriteFile(err) => {
                 CommandError::new(CommandErrorKind::Config, format!("Error writing file: {}", err))
             }
-            ChandlerError::Download(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
-            ChandlerError::DownloadHttpStatus {
-                status_code,
-                description,
-            } => CommandError::new(
-                CommandErrorKind::Other,
-                format!("HTTP error: {} {}", status_code, description),
-            ),
+            ChandlerError::Download(err) => match err {
+                DownloadError::Http { code, description } => {
+                    CommandError::new(CommandErrorKind::Other, format!("HTTP error: {} {}", code, description))
+                }
+                DownloadError::Network(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
+                DownloadError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
+            },
             ChandlerError::Other(err) => CommandError::new(CommandErrorKind::Other, err.to_string()),
         }
     }

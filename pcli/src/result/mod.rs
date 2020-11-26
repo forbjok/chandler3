@@ -1,6 +1,6 @@
 use serde_derive::Serialize;
 
-use chandler::ChandlerError;
+use chandler::{ChandlerError, DownloadError};
 
 mod update;
 
@@ -63,16 +63,19 @@ impl From<ChandlerError> for PcliError {
                 code: 10010,
                 description: format!("Error writing file: {}", err),
             },
-            ChandlerError::Download(err) => PcliError {
-                code: 10011,
-                description: err.to_string(),
-            },
-            ChandlerError::DownloadHttpStatus {
-                status_code,
-                description,
-            } => PcliError {
-                code: 10012,
-                description: format!("Download HTTP error: {} {}", status_code, description),
+            ChandlerError::Download(err) => match err {
+                DownloadError::Http { code, description } => PcliError {
+                    code: 10012,
+                    description: format!("Download HTTP error: {} {}", code, description),
+                },
+                DownloadError::Network(err) => PcliError {
+                    code: 10012,
+                    description: err.to_string(),
+                },
+                DownloadError::Other(err) => PcliError {
+                    code: 10013,
+                    description: err.to_string(),
+                },
             },
             ChandlerError::Other(err) => PcliError {
                 code: 10000,

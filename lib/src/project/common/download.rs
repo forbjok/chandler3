@@ -32,7 +32,7 @@ pub enum DownloadResult {
     Success { last_modified: Option<DateTime<Utc>> },
     NotModified,
     NotFound,
-    Error { status_code: u16, description: String },
+    OtherHttpError { status_code: u16, description: String },
 }
 
 pub fn download_file(
@@ -65,7 +65,7 @@ pub fn download_file(
         // Send request and get response.
         let mut response = request
             .send()
-            .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+            .map_err(|err| ChandlerError::Download(DownloadError::Network(err.to_string().into())))?;
 
         let status = response.status();
 
@@ -77,7 +77,7 @@ pub fn download_file(
             return match status_code {
                 304 => Ok(DownloadResult::NotModified),
                 404 => Ok(DownloadResult::NotFound),
-                _ => Ok(DownloadResult::Error {
+                _ => Ok(DownloadResult::OtherHttpError {
                     status_code,
                     description: status.to_string(),
                 }),
@@ -112,10 +112,9 @@ pub fn download_file(
                         bytes_downloaded: bytes_downloaded as u64,
                     });
 
-                    file.write(&buf[..bytes_read])
-                        .map_err(|err| ChandlerError::Download(err.to_string().into()))?;
+                    file.write(&buf[..bytes_read]).map_err(ChandlerError::WriteFile)?;
                 }
-                Err(err) => return Err(ChandlerError::Download(err.to_string().into())),
+                Err(err) => return Err(ChandlerError::Download(DownloadError::Other(err.to_string().into()))),
             }
         }
 
@@ -123,7 +122,7 @@ pub fn download_file(
             if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
                 if let Ok(value_str) = value.to_str() {
                     let last_modified = DateTime::parse_from_rfc2822(value_str)
-                        .map_err(|err| ChandlerError::Download(Cow::Owned(err.to_string())))?;
+                        .map_err(|err| ChandlerError::Download(DownloadError::Other(err.to_string().into())))?;
 
                     Some(last_modified.into())
                 } else {

@@ -67,13 +67,13 @@ pub fn update_thread(
                 new_link_count: 0,
             })
         }
-        DownloadResult::Error {
+        DownloadResult::OtherHttpError {
             status_code,
             description,
-        } => Err(ChandlerError::DownloadHttpStatus {
-            status_code,
+        } => Err(ChandlerError::Download(DownloadError::Http {
+            code: status_code,
             description: description.into(),
-        }),
+        })),
     };
 
     info!("END UPDATE");
