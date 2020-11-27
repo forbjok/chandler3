@@ -191,7 +191,7 @@ impl Project for V2Project {
         self.state.write_thread()?;
 
         // Download links.
-        self.download_links(ui_handler)?;
+        self.download_content(ui_handler)?;
 
         Ok(ProjectUpdateResult {
             was_updated: update_result.was_updated,
@@ -201,9 +201,9 @@ impl Project for V2Project {
         })
     }
 
-    fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
-        // Download linked files.
-        download_linked_files(&mut self.state, ui_handler)?;
+    fn download_content(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
+        // Download linked content.
+        download_linked_content(&mut self.state, ui_handler)?;
 
         self.save_state()?;
 

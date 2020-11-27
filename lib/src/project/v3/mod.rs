@@ -18,6 +18,7 @@ use super::common::*;
 use super::*;
 
 const PROJECT_DIR_NAME: &str = ".chandler3";
+const CONTENT_DIR_NAME: &str = "content";
 const ORIGINALS_DIR_NAME: &str = "originals";
 const CONFIG_FILE_NAME: &str = "thread.json";
 const STATE_FILE_NAME: &str = "state.json";
@@ -192,7 +193,7 @@ impl Project for V3Project {
         self.state.write_thread()?;
 
         // Download links.
-        self.download_links(ui_handler)?;
+        self.download_content(ui_handler)?;
 
         Ok(ProjectUpdateResult {
             was_updated: update_result.was_updated,
@@ -202,9 +203,9 @@ impl Project for V3Project {
         })
     }
 
-    fn download_links(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
-        // Download linked files.
-        download_linked_files(&mut self.state, ui_handler)?;
+    fn download_content(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
+        // Download linked content.
+        download_linked_content(&mut self.state, ui_handler)?;
 
         self.save_state()?;
 
@@ -235,7 +236,7 @@ impl LinkPathGenerator for V3LinkPathGenerator {
             .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
 
         if let Some(host) = url.host_str() {
-            Ok(Some(format!("{}{}", host, url.path())))
+            Ok(Some(format!("{}/{}{}", CONTENT_DIR_NAME, host, url.path())))
         } else {
             debug!("No host found in url: {}", url);
             Ok(None)

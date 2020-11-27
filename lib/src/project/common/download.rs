@@ -145,7 +145,7 @@ pub fn download_file(
 }
 
 /// Download all links for this project.
-pub fn download_linked_files(
+pub fn download_linked_content(
     state: &mut ProjectState,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<(), ChandlerError> {
