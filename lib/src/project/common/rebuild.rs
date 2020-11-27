@@ -1,18 +1,10 @@
 use crate::error::*;
 use crate::project::*;
-use crate::threadupdater::ThreadUpdater;
 use crate::ui::*;
 
 use super::*;
 
-pub struct RebuildResult {
-    pub thread: Box<dyn ThreadUpdater>,
-}
-
-pub fn rebuild_thread(
-    state: &mut ProjectState,
-    ui_handler: &mut dyn ChandlerUiHandler,
-) -> Result<RebuildResult, ChandlerError> {
+pub fn rebuild_thread(state: &mut ProjectState, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
     let original_files = get_html_files(&state.originals_path)
         .map_err(|err| ChandlerError::Other(format!("Error getting HTML files: {}", err).into()))?;
 
@@ -22,7 +14,8 @@ pub fn rebuild_thread(
         file_count: original_files.len() as u32,
     });
 
-    let thread: Option<Box<dyn ThreadUpdater>> = None;
+    // Clear existing thread object.
+    state.thread = None;
 
     for (i, file) in original_files.iter().enumerate() {
         let _update_result = process_thread(state, file)?;
@@ -36,7 +29,5 @@ pub fn rebuild_thread(
     // Report rebuild complete.
     ui_handler.event(&UiEvent::RebuildComplete);
 
-    Ok(RebuildResult {
-        thread: thread.ok_or_else(|| ChandlerError::Other("No thread produced during rebuild!".into()))?,
-    })
+    Ok(())
 }
