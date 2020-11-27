@@ -160,7 +160,7 @@ pub fn download_linked_files(
     let mut files_downloaded: u32 = 0;
     let mut files_failed: u32 = 0;
 
-    let download_path = &state.originals_path;
+    let download_path = &state.root_path;
     let new_links = &mut state.new_links;
     let failed_links = &mut state.failed_links;
 
