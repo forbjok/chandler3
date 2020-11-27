@@ -86,7 +86,7 @@ fn main() {
         2 => LevelFilter::Warn,
         3 => LevelFilter::Info,
         4 => LevelFilter::Debug,
-        5 | _ => LevelFilter::Trace,
+        _ => LevelFilter::Trace,
     };
 
     // Initialize logging
