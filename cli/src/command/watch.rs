@@ -9,6 +9,7 @@ use chandler::project;
 
 use crate::misc::pathgen;
 use crate::ui::*;
+use crate::ProjectOptions;
 
 use super::*;
 
@@ -20,7 +21,7 @@ lazy_static! {
     static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}");
 }
 
-pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
+pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CommandError> {
     let config = crate::config::CliConfig::from_default_location()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?
         .resolve()
@@ -51,7 +52,7 @@ pub fn watch(url: &str, interval: i64) -> Result<(), CommandError> {
 
     let interval_seconds = interval as u64;
 
-    let mut project = project::load_or_create(project_path, &url)?;
+    let mut project = project::load_or_create(project_path, &url, project_options.into())?;
 
     let ui_cancel = cancel.clone();
     let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {

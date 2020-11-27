@@ -57,6 +57,11 @@ pub struct ProjectState {
     pub failed_links: Vec<LinkInfo>,
 }
 
+pub struct ProjectOptions {
+    /// Project format to use when creating a new project.
+    pub format: ProjectFormat,
+}
+
 pub trait LinkPathGenerator {
     fn generate_path(&self, url: &str) -> Result<Option<String>, ChandlerError>;
 }
@@ -76,6 +81,14 @@ pub trait ProjectLoader {
     fn exists_at(path: &Path) -> bool;
 }
 
+impl Default for ProjectOptions {
+    fn default() -> Self {
+        Self {
+            format: ProjectFormat::V3,
+        }
+    }
+}
+
 impl ProjectState {
     pub fn write_thread(&self) -> Result<(), ChandlerError> {
         let thread_file_path = self.root_path.join(&self.thread_file_path);
@@ -89,10 +102,16 @@ impl ProjectState {
     }
 }
 
-pub fn exists_at(path: impl AsRef<Path>) -> bool {
+pub fn exists_at(path: impl AsRef<Path>) -> Option<ProjectFormat> {
     let path = path.as_ref();
 
-    v3::V3Project::exists_at(path) || v2::V2Project::exists_at(path)
+    if v3::V3Project::exists_at(path) {
+        Some(ProjectFormat::V3)
+    } else if v2::V2Project::exists_at(path) {
+        Some(ProjectFormat::V2)
+    } else {
+        None
+    }
 }
 
 pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
@@ -107,23 +126,19 @@ pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
     }
 }
 
-pub fn load_or_create_format(
+pub fn load_or_create(
     path: impl AsRef<Path>,
     url: &str,
-    create_project_format: ProjectFormat,
+    project_options: ProjectOptions,
 ) -> Result<Box<dyn Project>, ChandlerError> {
     let path = path.as_ref();
 
-    if exists_at(path) {
+    if exists_at(path).is_some() {
         load(path)
     } else {
-        Ok(match create_project_format {
+        Ok(match project_options.format {
             ProjectFormat::V2 => Box::new(v2::V2Project::create(path, url)?),
             ProjectFormat::V3 => Box::new(v3::V3Project::create(path, url)?),
         })
     }
-}
-
-pub fn load_or_create(path: impl AsRef<Path>, url: &str) -> Result<Box<dyn Project>, ChandlerError> {
-    load_or_create_format(path, url, ProjectFormat::V3)
 }

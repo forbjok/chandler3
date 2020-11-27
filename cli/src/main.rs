@@ -2,11 +2,21 @@ use std::path::PathBuf;
 
 use log::{debug, LevelFilter};
 use structopt::StructOpt;
+use strum_macros::EnumString;
 
 mod command;
 mod config;
 mod misc;
 mod ui;
+
+use chandler::project;
+
+#[derive(Clone, Copy, Debug, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum ProjectFormat {
+    V2,
+    V3,
+}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Chandler", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
@@ -18,11 +28,19 @@ struct Opt {
 }
 
 #[derive(StructOpt, Debug)]
+pub struct ProjectOptions {
+    #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
+    format: ProjectFormat,
+}
+
+#[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(name = "grab", about = "Download thread")]
     Grab {
         #[structopt(help = "URL of threads to download")]
         url: String,
+        #[structopt(flatten)]
+        project_options: ProjectOptions,
     },
     #[structopt(name = "rebuild", about = "Rebuild thread from original HTML files")]
     Rebuild {
@@ -35,7 +53,26 @@ enum Command {
         url: String,
         #[structopt(short = "i", long = "interval", help = "Interval (seconds)", default_value = "600")]
         interval: i64,
+        #[structopt(flatten)]
+        project_options: ProjectOptions,
     },
+}
+
+impl From<ProjectFormat> for project::ProjectFormat {
+    fn from(v: ProjectFormat) -> Self {
+        match v {
+            ProjectFormat::V2 => project::ProjectFormat::V2,
+            ProjectFormat::V3 => project::ProjectFormat::V3,
+        }
+    }
+}
+
+impl From<&ProjectOptions> for project::ProjectOptions {
+    fn from(v: &ProjectOptions) -> Self {
+        Self {
+            format: v.format.into(),
+        }
+    }
 }
 
 fn main() {
@@ -58,9 +95,13 @@ fn main() {
     debug!("Debug logging enabled.");
 
     let cmd_result = match opt.command {
-        Command::Grab { url } => command::grab(&url),
+        Command::Grab { url, project_options } => command::grab(&url, &project_options),
         Command::Rebuild { path } => command::rebuild(&path),
-        Command::Watch { url, interval } => command::watch(&url, interval),
+        Command::Watch {
+            url,
+            interval,
+            project_options,
+        } => command::watch(&url, interval, &project_options),
     };
 
     match cmd_result {

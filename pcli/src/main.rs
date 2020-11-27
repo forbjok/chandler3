@@ -8,7 +8,9 @@ mod command;
 mod result;
 mod ui;
 
-#[derive(Debug, EnumString)]
+use chandler::project;
+
+#[derive(Clone, Copy, Debug, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum ProjectFormat {
     V2,
@@ -25,6 +27,12 @@ struct Opt {
 }
 
 #[derive(StructOpt, Debug)]
+pub struct ProjectOptions {
+    #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
+    format: ProjectFormat,
+}
+
+#[derive(StructOpt, Debug)]
 enum Command {
     #[structopt(name = "grab", about = "Download thread")]
     Grab {
@@ -32,9 +40,26 @@ enum Command {
         url: String,
         #[structopt(help = "Destination path to download to")]
         destination: PathBuf,
-        #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
-        format: ProjectFormat,
+        #[structopt(flatten)]
+        project_options: ProjectOptions,
     },
+}
+
+impl From<ProjectFormat> for project::ProjectFormat {
+    fn from(v: ProjectFormat) -> Self {
+        match v {
+            ProjectFormat::V2 => project::ProjectFormat::V2,
+            ProjectFormat::V3 => project::ProjectFormat::V3,
+        }
+    }
+}
+
+impl From<&ProjectOptions> for project::ProjectOptions {
+    fn from(v: &ProjectOptions) -> Self {
+        Self {
+            format: v.format.into(),
+        }
+    }
 }
 
 fn main() {
@@ -60,8 +85,8 @@ fn main() {
         Command::Grab {
             url,
             destination,
-            format,
-        } => command::grab(&url, &destination, format),
+            project_options,
+        } => command::grab(&url, &destination, &project_options),
     };
 
     match cmd_result {

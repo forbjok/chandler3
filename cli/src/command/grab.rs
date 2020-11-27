@@ -7,10 +7,11 @@ use chandler::project;
 
 use crate::misc::pathgen;
 use crate::ui::*;
+use crate::ProjectOptions;
 
 use super::*;
 
-pub fn grab(url: &str) -> Result<(), CommandError> {
+pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandError> {
     let config = crate::config::CliConfig::from_default_location()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?
         .resolve()
@@ -26,7 +27,7 @@ pub fn grab(url: &str) -> Result<(), CommandError> {
     })?;
     info!("Project path: {}", project_path.display());
 
-    let mut project = project::load_or_create(project_path, url)?;
+    let mut project = project::load_or_create(project_path, url, project_options.into())?;
 
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));
