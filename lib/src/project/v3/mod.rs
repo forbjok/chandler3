@@ -78,7 +78,7 @@ impl ProjectLoader for V3Project {
             thread_file_path,
             originals_path,
             thread_url: url.to_owned(),
-            download_extensions: (*DEFAULT_DOWNLOAD_EXTENSIONS).clone(),
+            download_extensions: DEFAULT_DOWNLOAD_EXTENSIONS.iter().map(|s| (*s).to_owned()).collect(),
             parser: ParserType::FourChan,
             link_path_generator: Box::new(link_path_generator),
             thread: None,

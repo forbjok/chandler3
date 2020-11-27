@@ -1,8 +1,7 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use log::info;
 
 pub mod common;
@@ -15,18 +14,7 @@ use crate::error::*;
 use crate::threadupdater::{ParserType, ThreadUpdater};
 use crate::ui::*;
 
-lazy_static! {
-    static ref DEFAULT_DOWNLOAD_EXTENSIONS: HashSet<String> = vec![
-        "ico".to_owned(),
-        "css".to_owned(),
-        "png".to_owned(),
-        "jpg".to_owned(),
-        "gif".to_owned(),
-        "webm".to_owned(),
-    ]
-    .into_iter()
-    .collect();
-}
+const DEFAULT_DOWNLOAD_EXTENSIONS: &[&str] = &["css", "gif", "ico", "jpg", "png", "webm"];
 
 #[derive(Clone, Copy, Debug)]
 pub enum ProjectFormat {
@@ -47,7 +35,7 @@ pub struct ProjectState {
     pub thread_file_path: PathBuf,
     pub originals_path: PathBuf,
     pub thread_url: String,
-    pub download_extensions: HashSet<String>,
+    pub download_extensions: BTreeSet<String>,
     pub parser: ParserType,
     pub link_path_generator: Box<dyn LinkPathGenerator>,
     pub thread: Option<Box<dyn ThreadUpdater>>,

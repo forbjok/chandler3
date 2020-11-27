@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ use super::*;
 pub struct Config {
     pub parser: Parser,
     pub url: String,
-    pub download_extensions: HashSet<String>,
+    pub download_extensions: BTreeSet<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
