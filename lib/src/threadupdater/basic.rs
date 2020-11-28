@@ -40,20 +40,7 @@ impl ThreadUpdater for BasicThreadUpdater {
         // Parse new thread.
         self.thread = BasicThread::from_file(path)?;
 
-        let mut new_links: Vec<html::Link> = Vec::new();
-
-        // Process all links in the new thread.
-        self.thread.for_links(|link| {
-            new_links.push(link);
-
-            Ok(())
-        })?;
-
-        Ok(UpdateResult {
-            is_archived: false,
-            new_post_count: 0,
-            new_links,
-        })
+        self.perform_initial_cleanup()
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
