@@ -55,7 +55,7 @@ pub fn update_thread(
                 Ok(UpdateResult {
                     was_updated: true,
                     new_post_count: update_result.new_post_count,
-                    new_link_count: update_result.new_links.len() as u32,
+                    new_link_count: process_result.new_file_count,
                 })
             }
             DownloadResult::NotModified => Ok(UpdateResult {

@@ -3,7 +3,6 @@ use std::path::Path;
 use url::Url;
 
 use crate::error::*;
-use crate::html;
 use crate::project::ProjectState;
 use crate::threadupdater::{CreateThreadUpdater, UpdateResult};
 
@@ -16,6 +15,7 @@ pub struct LinkInfo {
 #[derive(Debug)]
 pub struct ProcessResult {
     pub update_result: UpdateResult,
+    pub new_file_count: u32,
 }
 
 pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> Result<ProcessResult, ChandlerError> {
@@ -37,54 +37,63 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
     // Put thread in project state.
     state.thread = Some(thread);
 
+    let thread_url = Url::parse(&state.thread_url)
+        .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+    let mut new_links: Vec<LinkInfo> = Vec::new();
+
     // Process new links.
     for link in update_result.new_links.iter_mut() {
-        if let Some(link_info) = process_link(state, link)? {
-            state.new_links.push(link_info);
-        }
-    }
+        let link_info = (|| {
+            if let Some(href) = link.file_link() {
+                // Make URL absolute.
+                let absolute_url = thread_url.join(&href).map_err(|err| {
+                    ChandlerError::Other(format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into())
+                })?;
 
-    Ok(ProcessResult { update_result })
-}
+                // Make file URL with query and fragment removed.
+                let file_url = {
+                    let mut url = absolute_url.clone();
+                    url.set_query(None);
+                    url.set_fragment(None);
 
-fn process_link(state: &mut ProjectState, link: &mut html::Link) -> Result<Option<LinkInfo>, ChandlerError> {
-    if let Some(href) = link.file_link() {
-        let thread_url = Url::parse(&state.thread_url)
-            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+                    url.to_string()
+                };
 
-        // Make URL absolute.
-        let absolute_url = thread_url.join(&href).map_err(|err| {
-            ChandlerError::Other(format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into())
-        })?;
+                if let Some(extension) = file_url.rsplit('.').next() {
+                    if state.download_extensions.contains(extension) {
+                        if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
+                            link.replace(&path);
 
-        // Make file URL with query and fragment removed.
-        let file_url = {
-            let mut url = absolute_url.clone();
-            url.set_query(None);
-            url.set_fragment(None);
-
-            url.to_string()
-        };
-
-        if let Some(extension) = file_url.rsplit('.').next() {
-            if state.download_extensions.contains(extension) {
-                if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
-                    link.replace(&path);
-
-                    return Ok(Some(LinkInfo {
-                        url: absolute_url.into_string(),
-                        path,
-                    }));
-                } else {
-                    return Err(ChandlerError::Other(
-                        format!("Could not generate local path for url: {}", &href).into(),
-                    ));
+                            return Ok(Some(LinkInfo {
+                                url: absolute_url.into_string(),
+                                path,
+                            }));
+                        } else {
+                            return Err(ChandlerError::Other(
+                                format!("Could not generate local path for url: {}", &href).into(),
+                            ));
+                        }
+                    }
                 }
-            }
-        }
 
-        Ok(None)
-    } else {
-        Ok(None)
+                Ok(None)
+            } else {
+                Ok(None)
+            }
+        })()?;
+
+        if let Some(link_info) = link_info {
+            new_links.push(link_info);
+        }
     }
+
+    let new_file_count = new_links.len() as u32;
+
+    state.new_links.append(&mut new_links);
+
+    Ok(ProcessResult {
+        update_result,
+        new_file_count,
+    })
 }
