@@ -6,6 +6,7 @@ use crate::html;
 pub mod aspnetchan;
 pub mod basic;
 pub mod fourchan;
+pub mod kusabax;
 pub mod tinyboard;
 
 pub trait HtmlDocument: Sized {

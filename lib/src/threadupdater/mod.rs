@@ -4,6 +4,7 @@ use crate::error::ChandlerError;
 use crate::html;
 use crate::threadparser::aspnetchan::AspNetChanThread;
 use crate::threadparser::fourchan::FourchanThread;
+use crate::threadparser::kusabax::KusabaxThread;
 use crate::threadparser::tinyboard::TinyboardThread;
 
 mod basic;
@@ -18,6 +19,7 @@ pub enum ParserType {
     FourChan,
     Tinyboard,
     AspNetChan,
+    Kusabax,
 }
 
 pub trait CreateThreadUpdater {
@@ -44,6 +46,7 @@ impl CreateThreadUpdater for ParserType {
             Self::FourChan => Box::new(MergingThreadUpdater::<FourchanThread>::from_file(path)?),
             Self::Tinyboard => Box::new(MergingThreadUpdater::<TinyboardThread>::from_file(path)?),
             Self::AspNetChan => Box::new(MergingThreadUpdater::<AspNetChanThread>::from_file(path)?),
+            Self::Kusabax => Box::new(MergingThreadUpdater::<KusabaxThread>::from_file(path)?),
         })
     }
 }
