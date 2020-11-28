@@ -7,7 +7,6 @@ use log::info;
 
 use chandler::project;
 
-use crate::misc::pathgen;
 use crate::ui::*;
 use crate::ProjectOptions;
 
@@ -22,25 +21,6 @@ lazy_static! {
 }
 
 pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CommandError> {
-    let config = crate::config::CliConfig::from_default_location()
-        .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?
-        .resolve()
-        .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
-
-    let sites_config = cli_common::config::load_sites_config()?;
-
-    let site_info = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
-        CommandError::new(
-            CommandErrorKind::Other,
-            format!("Could not generate path for url '{}': {}", url, err),
-        )
-    })?;
-
-    let project_path = site_info.path;
-    let parser = site_info.parser;
-
-    info!("Project path: {}", project_path.display());
-
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));
 
@@ -56,10 +36,10 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
     let interval_seconds = interval as u64;
 
     let mut project = project::builder()
-        .path(&project_path)
         .url(url)
+        .use_chandler_config()?
+        .use_sites_config()?
         .format(project_options.format.into())
-        .parser(parser)
         .load_or_create()?;
 
     let ui_cancel = cancel.clone();

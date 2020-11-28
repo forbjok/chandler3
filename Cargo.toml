@@ -6,7 +6,6 @@ opt-level = 3
 [workspace]
 members = [
   "cli",
-  "cli_common",
   "lib",
   "pcli",
 ]

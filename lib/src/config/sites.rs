@@ -1,16 +1,23 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use lazy_static::lazy_static;
 use serde_derive::Deserialize;
 
-use crate::config::*;
+use crate::error::*;
+use crate::misc::site_resolver::{SiteInfo, SiteResolver};
 use crate::util;
 
 use super::*;
 
 pub const DEFAULT_SITES_TOML: &str = include_str!("default_sites.toml");
+pub const SITES_FILENAME: &str = "sites.toml";
+
+lazy_static! {
+    static ref DEFAULT_SITES_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(SITES_FILENAME);
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -77,5 +84,13 @@ impl SiteResolver for SitesConfig {
         }
 
         Ok(None)
+    }
+}
+
+pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
+    if DEFAULT_SITES_FILE_PATH.exists() {
+        Ok(SitesConfig::from_file(&*DEFAULT_SITES_FILE_PATH)?)
+    } else {
+        Ok(SitesConfig::load_default()?)
     }
 }

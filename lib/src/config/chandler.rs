@@ -5,8 +5,10 @@ use std::str::FromStr;
 use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
-use chandler::util;
-use cli_common::config::DEFAULT_CONFIG_DIR_PATH;
+use crate::error::*;
+use crate::util;
+
+use super::*;
 
 pub const CONFIG_FILENAME: &str = "config.toml";
 
@@ -16,26 +18,26 @@ lazy_static! {
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct CliConfig {
+pub struct ChandlerConfig {
     pub download_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
-pub struct ResolvedCliConfig {
+pub struct ResolvedChandlerConfig {
     pub download_path: PathBuf,
 }
 
-impl CliConfig {
-    pub fn from_file(path: &Path) -> Result<Self, String> {
-        let mut file = util::open_file(path).map_err(|err| err.to_string())?;
+impl ChandlerConfig {
+    pub fn from_file(path: &Path) -> Result<Self, ChandlerError> {
+        let mut file = util::open_file(path).map_err(ChandlerError::OpenFile)?;
 
         let mut toml_str = String::new();
-        file.read_to_string(&mut toml_str).map_err(|err| err.to_string())?;
+        file.read_to_string(&mut toml_str).map_err(ChandlerError::ReadFile)?;
 
         Self::from_str(&toml_str)
     }
 
-    pub fn from_default_location() -> Result<Self, String> {
+    pub fn from_default_location() -> Result<Self, ChandlerError> {
         if !(*DEFAULT_CONFIG_FILE_PATH).exists() {
             return Ok(Self::default());
         }
@@ -43,27 +45,27 @@ impl CliConfig {
         Self::from_file(&*DEFAULT_CONFIG_FILE_PATH)
     }
 
-    pub fn resolve(self) -> Result<ResolvedCliConfig, String> {
+    pub fn resolve(self) -> Result<ResolvedChandlerConfig, ChandlerError> {
         let download_path = if let Some(download_path) = self.download_path {
             util::normalize_path(download_path)
         } else if let Some(os_download_path) = dirs::download_dir() {
             os_download_path.join("chandler3")
         } else {
-            return Err(
+            return Err(ChandlerError::Config(
                 "No default download directory found. A download path must be specified in the Chandler config file."
-                    .to_owned(),
-            );
+                    .into(),
+            ));
         };
 
-        Ok(ResolvedCliConfig { download_path })
+        Ok(ResolvedChandlerConfig { download_path })
     }
 }
 
-impl FromStr for CliConfig {
-    type Err = String;
+impl FromStr for ChandlerConfig {
+    type Err = ChandlerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config: Self = toml::from_str(s).map_err(|err| err.to_string())?;
+        let config: Self = toml::from_str(s).map_err(|err| ChandlerError::ParseConfig(err.to_string().into()))?;
 
         Ok(config)
     }

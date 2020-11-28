@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 chandler = { path = "../lib" }
-cli_common = { path = "../cli_common" }
 chrono = { version = "0.4.19", features = ["serde"] }
 fern = "0.6.0"
 log = "0.4.11"

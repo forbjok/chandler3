@@ -10,7 +10,9 @@ mod v3;
 
 use common::LinkInfo;
 
+use crate::config::chandler::ResolvedChandlerConfig;
 use crate::error::*;
+use crate::misc::site_resolver::{self, SiteResolver};
 use crate::threadupdater::{ParserType, ThreadUpdater};
 use crate::ui::*;
 
@@ -53,10 +55,13 @@ pub struct CreateProjectBuilder {
     path: Option<PathBuf>,
 
     /// Project format to use when creating a new project.
-    format: ProjectFormat,
+    format: Option<ProjectFormat>,
 
     /// Parser type to use for the created project.
-    parser: ParserType,
+    parser: Option<ParserType>,
+
+    config: Option<ResolvedChandlerConfig>,
+    site_resolver: Option<Box<dyn SiteResolver>>,
 }
 
 pub trait LinkPathGenerator {
@@ -84,8 +89,11 @@ impl Default for CreateProjectBuilder {
             url: None,
             path: None,
 
-            format: ProjectFormat::V3,
-            parser: ParserType::Basic,
+            format: None,
+            parser: None,
+
+            config: None,
+            site_resolver: None,
         }
     }
 }
@@ -145,36 +153,84 @@ impl CreateProjectBuilder {
     }
 
     pub fn format(mut self, format: ProjectFormat) -> Self {
-        self.format = format;
+        self.format = Some(format);
 
         self
     }
 
     pub fn parser(mut self, parser: ParserType) -> Self {
-        self.parser = parser;
+        self.parser = Some(parser);
 
         self
     }
 
-    pub fn load_or_create(self) -> Result<Box<dyn Project>, ChandlerError> {
-        if let Some(path) = self.path {
-            if exists_at(&path).is_some() {
-                load(&path)
-            } else if let Some(url) = self.url {
-                let format = self.format;
-                let parser = self.parser;
+    pub fn site_resolver(mut self, site_resolver: Box<dyn SiteResolver>) -> Self {
+        self.site_resolver = Some(site_resolver);
 
-                Ok(match format {
-                    ProjectFormat::V2 => Box::new(v2::V2Project::create(&path, &url, parser)?),
-                    ProjectFormat::V3 => Box::new(v3::V3Project::create(&path, &url, parser)?),
-                })
-            } else {
-                Err(ChandlerError::LoadProject(
-                    "Project does not exist at path, and no URL was specified!".into(),
-                ))
+        self
+    }
+
+    pub fn use_chandler_config(mut self) -> Result<Self, ChandlerError> {
+        self.config = Some(crate::config::chandler::ChandlerConfig::from_default_location()?.resolve()?);
+
+        Ok(self)
+    }
+
+    pub fn use_sites_config(mut self) -> Result<Self, ChandlerError> {
+        self.site_resolver = Some(Box::new(crate::config::sites::load_sites_config()?));
+
+        Ok(self)
+    }
+
+    pub fn load_or_create(self) -> Result<Box<dyn Project>, ChandlerError> {
+        if let Some(path) = &self.path {
+            if exists_at(&path).is_some() {
+                return load(&path);
             }
+        }
+
+        if let Some(url) = self.url {
+            let mut path = self.path;
+            let format = self.format;
+            let mut parser = self.parser;
+
+            if let Some(site_resolver) = self.site_resolver {
+                let site_info = if let Some(site_info) = site_resolver.resolve_site(&url)? {
+                    site_info
+                } else {
+                    site_resolver::unknown_site(&url)?
+                };
+
+                if path.is_none() {
+                    if let Some(config) = &self.config {
+                        let new_path = config.download_path.join(site_info.name).join(site_info.path);
+
+                        // If a project already exists at the generated path, load it.
+                        if exists_at(&new_path).is_some() {
+                            return load(&new_path);
+                        }
+
+                        path = Some(new_path);
+                    }
+                }
+
+                if parser.is_none() {
+                    parser = Some(site_info.parser);
+                }
+            }
+
+            let path = path.ok_or_else(|| ChandlerError::CreateProject("No project path was specified!".into()))?;
+            let format = format.unwrap_or(ProjectFormat::V3);
+            let parser = parser.ok_or_else(|| ChandlerError::CreateProject("No parser type was specified!".into()))?;
+
+            Ok(match format {
+                ProjectFormat::V2 => Box::new(v2::V2Project::create(&path, &url, parser)?),
+                ProjectFormat::V3 => Box::new(v3::V3Project::create(&path, &url, parser)?),
+            })
         } else {
-            Err(ChandlerError::LoadProject("No project path specified!".into()))
+            Err(ChandlerError::LoadProject(
+                "Project does not exist at path, and no URL was specified!".into(),
+            ))
         }
     }
 }
