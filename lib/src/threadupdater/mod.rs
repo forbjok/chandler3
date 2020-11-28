@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::error::ChandlerError;
 use crate::html;
 use crate::threadparser::fourchan::FourchanThread;
+use crate::threadparser::tinyboard::TinyboardThread;
 
 mod basic;
 mod merging;
@@ -14,6 +15,7 @@ pub use self::merging::*;
 pub enum ParserType {
     Basic,
     FourChan,
+    Tinyboard,
 }
 
 pub trait CreateThreadUpdater {
@@ -38,6 +40,7 @@ impl CreateThreadUpdater for ParserType {
         Ok(match self {
             Self::Basic => Box::new(BasicThreadUpdater::from_file(path)?),
             Self::FourChan => Box::new(MergingThreadUpdater::<FourchanThread>::from_file(path)?),
+            Self::Tinyboard => Box::new(MergingThreadUpdater::<TinyboardThread>::from_file(path)?),
         })
     }
 }

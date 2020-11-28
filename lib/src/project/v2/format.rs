@@ -2,19 +2,11 @@ use std::collections::BTreeSet;
 
 use serde_derive::{Deserialize, Serialize};
 
+pub use crate::config::Parser;
 use crate::error::*;
-use crate::threadupdater::ParserType;
 use crate::util;
 
 use super::*;
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Parser {
-    Basic,
-    #[serde(rename = "4chan")]
-    FourChan,
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,24 +87,6 @@ impl From<&ProjectState> for State {
                     .map(|l| l.url.clone())
                     .collect(),
             },
-        }
-    }
-}
-
-impl From<Parser> for ParserType {
-    fn from(parser: Parser) -> Self {
-        match parser {
-            Parser::Basic => ParserType::Basic,
-            Parser::FourChan => ParserType::FourChan,
-        }
-    }
-}
-
-impl From<ParserType> for Parser {
-    fn from(parser: ParserType) -> Self {
-        match parser {
-            ParserType::Basic => Parser::Basic,
-            ParserType::FourChan => Parser::FourChan,
         }
     }
 }

@@ -5,6 +5,7 @@ use crate::html;
 
 pub mod basic;
 pub mod fourchan;
+pub mod tinyboard;
 
 pub trait HtmlDocument: Sized {
     type Document;

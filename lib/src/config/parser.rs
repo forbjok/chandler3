@@ -8,6 +8,7 @@ pub enum Parser {
     Basic,
     #[serde(rename = "4chan")]
     FourChan,
+    Tinyboard,
 }
 
 impl From<Parser> for ParserType {
@@ -15,6 +16,7 @@ impl From<Parser> for ParserType {
         match parser {
             Parser::Basic => ParserType::Basic,
             Parser::FourChan => ParserType::FourChan,
+            Parser::Tinyboard => ParserType::Tinyboard,
         }
     }
 }
@@ -24,6 +26,7 @@ impl From<ParserType> for Parser {
         match parser {
             ParserType::Basic => Parser::Basic,
             ParserType::FourChan => Parser::FourChan,
+            ParserType::Tinyboard => Parser::Tinyboard,
         }
     }
 }
