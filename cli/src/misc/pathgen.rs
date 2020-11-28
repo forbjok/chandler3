@@ -9,7 +9,7 @@ use chandler::error::*;
 use chandler::site::SiteResolver;
 
 lazy_static! {
-    static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.]+)/(.+)/thread/(\d+)"#).unwrap();
+    static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.]+)/(?:(.+)/)*([^\.]+).*"#).unwrap();
 }
 
 pub fn generate_destination_path(
@@ -22,13 +22,13 @@ pub fn generate_destination_path(
     if let Some(site_info) = site_info {
         Ok(cfg.download_path.join(site_info.name).join(site_info.path))
     } else {
-        let cap = REGEX_SPLIT_URL
+        let caps = REGEX_SPLIT_URL
             .captures(url)
-            .ok_or_else(|| ChandlerError::Other(format!("Invalid thread url: {}!", url).into()))?;
+            .ok_or_else(|| ChandlerError::Other(format!("Error parsing url: {}!", url).into()))?;
 
-        let host = &cap[1];
-        let board = &cap[2];
-        let thread = &cap[3];
+        let host = &caps[1];
+        let board = &caps[2];
+        let thread = &caps[3];
 
         let path = cfg.download_path.join("unknown").join(host).join(board).join(thread);
 
