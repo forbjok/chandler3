@@ -9,6 +9,7 @@ pub enum Parser {
     #[serde(rename = "4chan")]
     FourChan,
     Tinyboard,
+    AspNetChan,
 }
 
 impl From<Parser> for ParserType {
@@ -17,6 +18,7 @@ impl From<Parser> for ParserType {
             Parser::Basic => ParserType::Basic,
             Parser::FourChan => ParserType::FourChan,
             Parser::Tinyboard => ParserType::Tinyboard,
+            Parser::AspNetChan => ParserType::AspNetChan,
         }
     }
 }
@@ -27,6 +29,7 @@ impl From<ParserType> for Parser {
             ParserType::Basic => Parser::Basic,
             ParserType::FourChan => Parser::FourChan,
             ParserType::Tinyboard => Parser::Tinyboard,
+            ParserType::AspNetChan => Parser::AspNetChan,
         }
     }
 }

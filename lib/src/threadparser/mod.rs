@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::error::*;
 use crate::html;
 
+pub mod aspnetchan;
 pub mod basic;
 pub mod fourchan;
 pub mod tinyboard;
