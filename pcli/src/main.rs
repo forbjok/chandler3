@@ -54,14 +54,6 @@ impl From<ProjectFormat> for project::ProjectFormat {
     }
 }
 
-impl From<&ProjectOptions> for project::ProjectOptions {
-    fn from(v: &ProjectOptions) -> Self {
-        Self {
-            format: v.format.into(),
-        }
-    }
-}
-
 fn main() {
     let opt = Opt::from_args();
 

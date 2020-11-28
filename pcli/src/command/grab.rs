@@ -29,7 +29,12 @@ pub fn grab(url: &str, destination: &Path, project_options: &ProjectOptions) -> 
             None => ParserType::Basic,
         };
 
-        let mut project = project::load_or_create(&project_path, url, parser, &project_options.into())?;
+        let mut project = project::builder()
+            .path(&project_path)
+            .url(url)
+            .format(project_options.format.into())
+            .parser(parser)
+            .load_or_create()?;
 
         let mut ui_handler = StderrUiHandler::new();
 

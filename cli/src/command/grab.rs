@@ -31,7 +31,12 @@ pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandEr
 
     info!("Project path: {}", project_path.display());
 
-    let mut project = project::load_or_create(project_path, url, parser, &project_options.into())?;
+    let mut project = project::builder()
+        .path(&project_path)
+        .url(url)
+        .format(project_options.format.into())
+        .parser(parser)
+        .load_or_create()?;
 
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));

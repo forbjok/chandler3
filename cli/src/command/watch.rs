@@ -55,7 +55,12 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
 
     let interval_seconds = interval as u64;
 
-    let mut project = project::load_or_create(project_path, &url, parser, &project_options.into())?;
+    let mut project = project::builder()
+        .path(&project_path)
+        .url(url)
+        .format(project_options.format.into())
+        .parser(parser)
+        .load_or_create()?;
 
     let ui_cancel = cancel.clone();
     let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {

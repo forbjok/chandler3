@@ -45,9 +45,18 @@ pub struct ProjectState {
     pub failed_links: Vec<LinkInfo>,
 }
 
-pub struct ProjectOptions {
+pub struct CreateProjectBuilder {
+    /// Thread URL.
+    url: Option<String>,
+
+    /// Path to create project at.
+    path: Option<PathBuf>,
+
     /// Project format to use when creating a new project.
-    pub format: ProjectFormat,
+    format: ProjectFormat,
+
+    /// Parser type to use for the created project.
+    parser: ParserType,
 }
 
 pub trait LinkPathGenerator {
@@ -69,10 +78,14 @@ pub trait ProjectLoader {
     fn exists_at(path: &Path) -> bool;
 }
 
-impl Default for ProjectOptions {
+impl Default for CreateProjectBuilder {
     fn default() -> Self {
         Self {
+            url: None,
+            path: None,
+
             format: ProjectFormat::V3,
+            parser: ParserType::Basic,
         }
     }
 }
@@ -114,20 +127,54 @@ pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
     }
 }
 
-pub fn load_or_create(
-    path: impl AsRef<Path>,
-    url: &str,
-    parser: ParserType,
-    project_options: &ProjectOptions,
-) -> Result<Box<dyn Project>, ChandlerError> {
-    let path = path.as_ref();
+pub fn builder() -> CreateProjectBuilder {
+    CreateProjectBuilder::default()
+}
 
-    if exists_at(path).is_some() {
-        load(path)
-    } else {
-        Ok(match project_options.format {
-            ProjectFormat::V2 => Box::new(v2::V2Project::create(path, url, parser)?),
-            ProjectFormat::V3 => Box::new(v3::V3Project::create(path, url, parser)?),
-        })
+impl CreateProjectBuilder {
+    pub fn url(mut self, url: &str) -> Self {
+        self.url = Some(url.to_owned());
+
+        self
+    }
+
+    pub fn path(mut self, path: &Path) -> Self {
+        self.path = Some(path.to_path_buf());
+
+        self
+    }
+
+    pub fn format(mut self, format: ProjectFormat) -> Self {
+        self.format = format;
+
+        self
+    }
+
+    pub fn parser(mut self, parser: ParserType) -> Self {
+        self.parser = parser;
+
+        self
+    }
+
+    pub fn load_or_create(self) -> Result<Box<dyn Project>, ChandlerError> {
+        if let Some(path) = self.path {
+            if exists_at(&path).is_some() {
+                load(&path)
+            } else if let Some(url) = self.url {
+                let format = self.format;
+                let parser = self.parser;
+
+                Ok(match format {
+                    ProjectFormat::V2 => Box::new(v2::V2Project::create(&path, &url, parser)?),
+                    ProjectFormat::V3 => Box::new(v3::V3Project::create(&path, &url, parser)?),
+                })
+            } else {
+                Err(ChandlerError::LoadProject(
+                    "Project does not exist at path, and no URL was specified!".into(),
+                ))
+            }
+        } else {
+            Err(ChandlerError::LoadProject("No project path specified!".into()))
+        }
     }
 }
