@@ -21,6 +21,15 @@ lazy_static! {
 }
 
 pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CommandError> {
+    let mut project = project::builder()
+        .url(url)
+        .use_chandler_config()?
+        .use_sites_config()?
+        .format(project_options.format.into())
+        .load_or_create()?;
+
+    eprintln!("Project path: {}", project.get_path().display());
+
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));
 
@@ -34,13 +43,6 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
     .expect("Error setting Ctrl-C handler");
 
     let interval_seconds = interval as u64;
-
-    let mut project = project::builder()
-        .url(url)
-        .use_chandler_config()?
-        .use_sites_config()?
-        .format(project_options.format.into())
-        .load_or_create()?;
 
     let ui_cancel = cancel.clone();
     let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {

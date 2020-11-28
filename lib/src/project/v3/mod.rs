@@ -226,6 +226,10 @@ impl Project for V3Project {
 
         Ok(())
     }
+
+    fn get_path(&self) -> &Path {
+        &self.state.root_path
+    }
 }
 
 impl LinkPathGenerator for V3LinkPathGenerator {

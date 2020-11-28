@@ -73,6 +73,8 @@ pub trait Project {
     fn download_content(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError>;
     fn save(&self) -> Result<(), ChandlerError>;
+
+    fn get_path(&self) -> &Path;
 }
 
 pub trait ProjectLoader {

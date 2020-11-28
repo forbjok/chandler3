@@ -18,6 +18,8 @@ pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandEr
         .format(project_options.format.into())
         .load_or_create()?;
 
+    eprintln!("Project path: {}", project.get_path().display());
+
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));
 

@@ -224,6 +224,10 @@ impl Project for V2Project {
 
         Ok(())
     }
+
+    fn get_path(&self) -> &Path {
+        &self.state.root_path
+    }
 }
 
 impl LinkPathGenerator for V2LinkPathGenerator {
