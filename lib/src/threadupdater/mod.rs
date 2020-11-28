@@ -2,11 +2,17 @@ use std::path::Path;
 
 use crate::error::ChandlerError;
 use crate::html;
+use crate::threadparser::fourchan::FourchanThread;
 
-pub mod fourchan;
+mod basic;
+mod merging;
+
+pub use self::basic::*;
+pub use self::merging::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ParserType {
+    Basic,
     FourChan,
 }
 
@@ -30,7 +36,8 @@ pub struct UpdateResult {
 impl CreateThreadUpdater for ParserType {
     fn create_thread_updater_from(&self, path: &Path) -> Result<Box<dyn ThreadUpdater>, ChandlerError> {
         Ok(match self {
-            Self::FourChan => Box::new(fourchan::FourchanThreadUpdater::from_file(path)?),
+            Self::Basic => Box::new(BasicThreadUpdater::from_file(path)?),
+            Self::FourChan => Box::new(MergingThreadUpdater::<FourchanThread>::from_file(path)?),
         })
     }
 }

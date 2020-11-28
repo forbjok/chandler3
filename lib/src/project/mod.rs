@@ -64,7 +64,7 @@ pub trait Project {
 pub trait ProjectLoader {
     type P: Project;
 
-    fn create(path: &Path, url: &str) -> Result<Self::P, ChandlerError>;
+    fn create(path: &Path, url: &str, parser: ParserType) -> Result<Self::P, ChandlerError>;
     fn load(path: &Path) -> Result<Self::P, ChandlerError>;
     fn exists_at(path: &Path) -> bool;
 }
@@ -117,7 +117,8 @@ pub fn load(path: impl AsRef<Path>) -> Result<Box<dyn Project>, ChandlerError> {
 pub fn load_or_create(
     path: impl AsRef<Path>,
     url: &str,
-    project_options: ProjectOptions,
+    parser: ParserType,
+    project_options: &ProjectOptions,
 ) -> Result<Box<dyn Project>, ChandlerError> {
     let path = path.as_ref();
 
@@ -125,8 +126,8 @@ pub fn load_or_create(
         load(path)
     } else {
         Ok(match project_options.format {
-            ProjectFormat::V2 => Box::new(v2::V2Project::create(path, url)?),
-            ProjectFormat::V3 => Box::new(v3::V3Project::create(path, url)?),
+            ProjectFormat::V2 => Box::new(v2::V2Project::create(path, url, parser)?),
+            ProjectFormat::V3 => Box::new(v3::V3Project::create(path, url, parser)?),
         })
     }
 }

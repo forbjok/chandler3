@@ -187,7 +187,19 @@ pub fn download_linked_content(
             })?;
         }
 
-        let success = match download_file(url, &path, None, ui_handler) {
+        let mut if_modified_since: Option<DateTime<Utc>> = None;
+
+        // If the file already exists, try to get its modification time
+        // so that we can pass it to the request's If-Modified-Since header.
+        if path.exists() {
+            if let Ok(m) = fs::metadata(&path) {
+                if let Ok(st) = m.modified() {
+                    if_modified_since = Some(st.into());
+                }
+            }
+        }
+
+        let success = match download_file(url, &path, if_modified_since, ui_handler) {
             Ok(r) => match r {
                 DownloadResult::Success { .. } => true,
                 DownloadResult::NotModified => true,

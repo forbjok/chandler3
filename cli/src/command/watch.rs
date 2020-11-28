@@ -27,14 +27,17 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
         .resolve()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
 
-    let sites_config = crate::config::load_sites_config()?;
+    let sites_config = cli_common::config::load_sites_config()?;
 
-    let project_path = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
+    let site_info = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
         CommandError::new(
             CommandErrorKind::Other,
             format!("Could not generate path for url '{}': {}", url, err),
         )
     })?;
+
+    let project_path = site_info.path;
+    let parser = site_info.parser;
 
     info!("Project path: {}", project_path.display());
 
@@ -52,7 +55,7 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
 
     let interval_seconds = interval as u64;
 
-    let mut project = project::load_or_create(project_path, &url, project_options.into())?;
+    let mut project = project::load_or_create(project_path, &url, parser, &project_options.into())?;
 
     let ui_cancel = cancel.clone();
     let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {

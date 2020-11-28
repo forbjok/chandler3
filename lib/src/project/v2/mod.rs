@@ -46,7 +46,7 @@ impl V2LinkPathGenerator {
 impl ProjectLoader for V2Project {
     type P = V2Project;
 
-    fn create(path: &Path, url: &str) -> Result<Self::P, ChandlerError> {
+    fn create(path: &Path, url: &str, parser: ParserType) -> Result<Self::P, ChandlerError> {
         let root_path = path.to_path_buf();
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
@@ -79,7 +79,7 @@ impl ProjectLoader for V2Project {
             originals_path,
             thread_url: url.to_owned(),
             download_extensions: DEFAULT_DOWNLOAD_EXTENSIONS.iter().map(|s| (*s).to_owned()).collect(),
-            parser: ParserType::FourChan,
+            parser,
             link_path_generator: Box::new(link_path_generator),
             thread: None,
             is_dead: false,

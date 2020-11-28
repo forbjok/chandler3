@@ -17,17 +17,21 @@ pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandEr
         .resolve()
         .map_err(|err| CommandError::new(CommandErrorKind::Config, Cow::Owned(err)))?;
 
-    let sites_config = crate::config::load_sites_config()?;
+    let sites_config = cli_common::config::load_sites_config()?;
 
-    let project_path = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
+    let site_info = pathgen::generate_destination_path(&config, &sites_config, url).map_err(|err| {
         CommandError::new(
             CommandErrorKind::Other,
             format!("Could not generate path for url '{}': {}", url, err),
         )
     })?;
+
+    let project_path = site_info.path;
+    let parser = site_info.parser;
+
     info!("Project path: {}", project_path.display());
 
-    let mut project = project::load_or_create(project_path, url, project_options.into())?;
+    let mut project = project::load_or_create(project_path, url, parser, &project_options.into())?;
 
     // Cancellation boolean.
     let cancel = Arc::new(AtomicBool::new(false));

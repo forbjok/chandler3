@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 chandler = { path = "../lib" }
+cli_common = { path = "../cli_common" }
 chrono = { version = "0.4.19", features = ["serde"] }
 ctrlc = "3.1.7"
 dirs = "3.0.1"

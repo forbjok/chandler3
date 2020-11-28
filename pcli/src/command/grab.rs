@@ -4,6 +4,8 @@ use std::path::Path;
 use log::info;
 
 use chandler::project::{self, ProjectUpdateResult};
+use chandler::site::SiteResolver;
+use chandler::threadupdater::ParserType;
 use chandler::util;
 
 use crate::result::*;
@@ -18,7 +20,16 @@ pub fn grab(url: &str, destination: &Path, project_options: &ProjectOptions) -> 
     info!("Project path: {}", project_path.display());
 
     let result = (|| -> Result<ProjectUpdateResult, PcliError> {
-        let mut project = project::load_or_create(&project_path, url, project_options.into())?;
+        // Load sites config.
+        let sites_config = cli_common::config::load_sites_config()?;
+
+        // Try to resolve site in order to know which parser to use.
+        let parser = match sites_config.resolve_site(url)? {
+            Some(si) => si.parser,
+            None => ParserType::Basic,
+        };
+
+        let mut project = project::load_or_create(&project_path, url, parser, &project_options.into())?;
 
         let mut ui_handler = StderrUiHandler::new();
 

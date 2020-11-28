@@ -5,18 +5,13 @@ use std::str::FromStr;
 use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
-use chandler::error::*;
-use chandler::site::config::SitesConfig;
 use chandler::util;
+use cli_common::config::DEFAULT_CONFIG_DIR_PATH;
 
-pub const CONFIG_DIR: &str = "chandler3";
 pub const CONFIG_FILENAME: &str = "config.toml";
-pub const SITES_FILENAME: &str = "sites.toml";
 
 lazy_static! {
-    static ref DEFAULT_CONFIG_DIR_PATH: PathBuf = dirs::config_dir().unwrap().join(CONFIG_DIR);
     static ref DEFAULT_CONFIG_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(CONFIG_FILENAME);
-    static ref DEFAULT_SITES_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(SITES_FILENAME);
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -71,13 +66,5 @@ impl FromStr for CliConfig {
         let config: Self = toml::from_str(s).map_err(|err| err.to_string())?;
 
         Ok(config)
-    }
-}
-
-pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
-    if DEFAULT_SITES_FILE_PATH.exists() {
-        Ok(SitesConfig::from_file(&*DEFAULT_SITES_FILE_PATH)?)
-    } else {
-        Ok(SitesConfig::load_default()?)
     }
 }

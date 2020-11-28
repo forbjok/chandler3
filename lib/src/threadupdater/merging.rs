@@ -1,21 +1,20 @@
-use crate::threadparser::fourchan::FourchanThread;
 use crate::threadparser::MergeableImageboardThread;
 
 use super::*;
 
-pub struct FourchanThreadUpdater {
-    thread: FourchanThread,
+pub struct MergingThreadUpdater<TP: MergeableImageboardThread> {
+    thread: TP,
 }
 
-impl FourchanThreadUpdater {
+impl<TP: MergeableImageboardThread> MergingThreadUpdater<TP> {
     pub fn from_file(file_path: &Path) -> Result<Self, ChandlerError> {
         Ok(Self {
-            thread: FourchanThread::from_file(file_path)?,
+            thread: TP::from_file(file_path)?,
         })
     }
 }
 
-impl ThreadUpdater for FourchanThreadUpdater {
+impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
     fn perform_initial_cleanup(&mut self) -> Result<UpdateResult, ChandlerError> {
         // Purge all script tags from the thread HTML.
         self.thread.purge_scripts()?;
@@ -44,7 +43,7 @@ impl ThreadUpdater for FourchanThreadUpdater {
         let thread = &mut self.thread;
 
         // Parse new thread.
-        let new_thread = FourchanThread::from_file(path)?;
+        let new_thread = TP::from_file(path)?;
 
         // Merge posts from new thread into the main thread.
         let new_posts = thread.merge_posts_from(&new_thread)?;

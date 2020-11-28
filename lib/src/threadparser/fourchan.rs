@@ -59,9 +59,8 @@ impl Iterator for GetPosts {
     }
 }
 
-impl MergeableImageboardThread for FourchanThread {
+impl HtmlDocument for FourchanThread {
     type Document = NodeRef;
-    type Post = FourchanPost;
 
     fn from_document(document: Self::Document) -> Self {
         Self { root: document }
@@ -85,6 +84,26 @@ impl MergeableImageboardThread for FourchanThread {
 
         Ok(())
     }
+
+    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
+        let links = html::find_links(self.root.clone());
+
+        for link in links.into_iter() {
+            action(link)?;
+        }
+
+        Ok(())
+    }
+
+    fn purge_scripts(&self) -> Result<(), ChandlerError> {
+        html::purge_scripts(self.root.clone());
+
+        Ok(())
+    }
+}
+
+impl MergeableImageboardThread for FourchanThread {
+    type Post = FourchanPost;
 
     fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
@@ -123,16 +142,6 @@ impl MergeableImageboardThread for FourchanThread {
         Ok(new_posts)
     }
 
-    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
-        let links = html::find_links(self.root.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
-    }
-
     fn for_post_links(
         &self,
         post: &Self::Post,
@@ -143,12 +152,6 @@ impl MergeableImageboardThread for FourchanThread {
         for link in links.into_iter() {
             action(link)?;
         }
-
-        Ok(())
-    }
-
-    fn purge_scripts(&self) -> Result<(), ChandlerError> {
-        html::purge_scripts(self.root.clone());
 
         Ok(())
     }
