@@ -86,6 +86,7 @@ impl ProjectLoader for V2Project {
             last_modified: None,
             new_links: Vec::new(),
             failed_links: Vec::new(),
+            seen_links: HashSet::new(),
         };
 
         // Save initial project config and state.
@@ -148,6 +149,8 @@ impl ProjectLoader for V2Project {
             .map(|(url, path)| LinkInfo { url, path })
             .collect();
 
+        let seen_links: HashSet<String> = failed_links.iter().map(|l| l.url.clone()).collect();
+
         let state = ProjectState {
             root_path,
             thread_file_path,
@@ -161,6 +164,7 @@ impl ProjectLoader for V2Project {
             last_modified: state.last_modified,
             new_links: Vec::new(),
             failed_links,
+            seen_links,
         };
 
         Ok(Self {

@@ -84,6 +84,12 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
         })()?;
 
         if let Some(link_info) = link_info {
+            // If link has already been seen before, there is no need to download it again.
+            if state.seen_links.contains(&link_info.url) {
+                continue;
+            }
+
+            state.seen_links.insert(link_info.url.clone());
             new_links.push(link_info);
         }
     }

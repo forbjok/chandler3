@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -45,6 +45,7 @@ pub struct ProjectState {
     pub is_dead: bool,
     pub new_links: Vec<LinkInfo>,
     pub failed_links: Vec<LinkInfo>,
+    pub seen_links: HashSet<String>,
 }
 
 pub struct CreateProjectBuilder {
