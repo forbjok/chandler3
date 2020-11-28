@@ -39,10 +39,13 @@ impl ChandlerUiHandler for IndicatifUiHandler {
     fn event(&mut self, e: &UiEvent) {
         match e {
             UiEvent::DownloadStart { file_count } => {
-                let bar = ProgressBar::new(*file_count as u64).with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
+                let bar = ProgressBar::new(*file_count as u64)
+                    .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone())
+                    .with_prefix("Overall")
+                    .with_message("files downloaded...");
 
-                bar.set_prefix("Overall");
-                bar.set_message("files downloaded...");
+                // Draw initial bar.
+                bar.tick();
 
                 self.overall_download_bar = Some(bar);
             }
@@ -64,9 +67,13 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 }
             }
             UiEvent::DownloadFileStart { url, .. } => {
-                let bar = ProgressBar::new(0).with_style((*DOWNLOAD_SPINNER_STYLE).clone());
-                bar.set_prefix("Download");
-                bar.set_message(&url);
+                let bar = ProgressBar::new(0)
+                    .with_style((*DOWNLOAD_SPINNER_STYLE).clone())
+                    .with_prefix("Download")
+                    .with_message(&url);
+
+                // Draw initial bar.
+                bar.tick();
 
                 self.file_download_bar = Some(bar);
             }
@@ -113,9 +120,9 @@ impl ChandlerUiHandler for IndicatifUiHandler {
             UiEvent::RebuildStart { path, file_count } => {
                 println!("Rebuilding project at {}...", path.display());
 
-                let bar = ProgressBar::new(*file_count as u64).with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone());
-
-                bar.set_prefix("Rebuild");
+                let bar = ProgressBar::new(*file_count as u64)
+                    .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone())
+                    .with_prefix("Rebuild");
 
                 self.rebuild_bar = Some(bar);
             }

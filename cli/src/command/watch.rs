@@ -92,11 +92,14 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
 fn waiting_bar(wait_seconds: u64, message: &str, cancel: &Arc<AtomicBool>) -> bool {
     let mut seconds_passed: u64 = 0;
 
-    let waiting_bar = ProgressBar::new(wait_seconds);
-    waiting_bar.set_style((*WAITING_BAR_STYLE).clone());
-    waiting_bar.set_prefix("Waiting");
-    waiting_bar.set_message(message);
-    waiting_bar.set_position(wait_seconds);
+    let waiting_bar = ProgressBar::new(wait_seconds)
+        .with_style((*WAITING_BAR_STYLE).clone())
+        .with_prefix("Waiting")
+        .with_message(message)
+        .with_position(wait_seconds);
+
+    // Draw initial bar.
+    waiting_bar.tick();
 
     // Wait until the specified time has passed.
     while seconds_passed < wait_seconds {
