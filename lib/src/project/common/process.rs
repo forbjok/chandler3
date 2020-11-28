@@ -49,20 +49,27 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
 
 fn process_link(state: &mut ProjectState, link: &mut html::Link) -> Result<Option<LinkInfo>, ChandlerError> {
     if let Some(href) = link.file_link() {
-        if let Some(extension) = href.rsplit('.').next() {
+        let thread_url = Url::parse(&state.thread_url)
+            .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
+
+        // Make URL absolute.
+        let absolute_url = thread_url.join(&href).map_err(|err| {
+            ChandlerError::Other(format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into())
+        })?;
+
+        // Make file URL with query and fragment removed.
+        let file_url = {
+            let mut url = absolute_url.clone();
+            url.set_query(None);
+            url.set_fragment(None);
+
+            url.to_string()
+        };
+
+        if let Some(extension) = file_url.rsplit('.').next() {
             if state.download_extensions.contains(extension) {
-                if let Some(path) = state.link_path_generator.generate_path(&href)? {
+                if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
                     link.replace(&path);
-
-                    let thread_url = Url::parse(&state.thread_url)
-                        .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {}", err).into()))?;
-
-                    // Make URL absolute.
-                    let absolute_url = thread_url.join(&href).map_err(|err| {
-                        ChandlerError::Other(
-                            format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into(),
-                        )
-                    })?;
 
                     return Ok(Some(LinkInfo {
                         url: absolute_url.into_string(),
