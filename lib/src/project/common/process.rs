@@ -63,6 +63,9 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
                 if let Some(extension) = file_url.rsplit('.').next() {
                     if state.download_extensions.contains(extension) {
                         if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
+                            // Replace invalid filesystem characters in path.
+                            let path = replace_invalid_filesystem_characters(&path);
+
                             link.replace(&path);
 
                             return Ok(Some(LinkInfo {
@@ -102,4 +105,9 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
         update_result,
         new_file_count,
     })
+}
+
+/// Replace invalid filesystem characters in string.
+fn replace_invalid_filesystem_characters(s: &str) -> String {
+    s.replace(':', "_").replace("//", "_")
 }
