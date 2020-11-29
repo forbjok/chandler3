@@ -26,15 +26,15 @@ pub trait HtmlDocument: Sized {
 }
 
 pub trait MergeableImageboardThread: HtmlDocument {
-    type Post;
+    type Reply;
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError>;
+    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError>;
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError>;
+    fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError>;
 
-    fn for_post_links(
+    fn for_reply_links(
         &self,
-        post: &Self::Post,
+        reply: &Self::Reply,
         action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError>;
 

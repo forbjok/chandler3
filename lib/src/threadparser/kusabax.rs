@@ -21,17 +21,17 @@ pub struct KusabaxThread {
 }
 
 #[derive(Clone, Debug)]
-pub struct KusabaxPost {
+pub struct KusabaxReply {
     pub id: u32,
     pub node: NodeRef,
 }
 
-impl KusabaxPost {
+impl KusabaxReply {
     pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get post ID from node
+        // Try to get post ID from node.
         let id = (|| {
             if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute
+                // Try to locate "id" attribute.
                 if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
                     // Try to get post ID from attribute.
                     if let Some(caps) = REGEX_GET_POST_ID.captures(id_attr) {
@@ -48,17 +48,17 @@ impl KusabaxPost {
     }
 }
 
-struct GetPosts {
-    posts: VecDeque<NodeRef>,
+struct GetReplies {
+    replies: VecDeque<NodeRef>,
 }
 
-impl Iterator for GetPosts {
-    type Item = KusabaxPost;
+impl Iterator for GetReplies {
+    type Item = KusabaxReply;
 
-    fn next(&mut self) -> Option<KusabaxPost> {
-        while let Some(node) = self.posts.pop_front() {
-            if let Some(post) = KusabaxPost::from_node(node) {
-                return Some(post);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node) = self.replies.pop_front() {
+            if let Some(reply) = Self::Item::from_node(node) {
+                return Some(reply);
             }
         }
 
@@ -110,63 +110,67 @@ impl HtmlDocument for KusabaxThread {
 }
 
 impl MergeableImageboardThread for KusabaxThread {
-    type Post = KusabaxPost;
+    type Reply = KusabaxReply;
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
-        let op = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["post"])
-            .next()
-            .ok_or_else(|| ChandlerError::Other("Error getting OP element!".into()))?;
+    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
+        let replies: VecDeque<NodeRef> =
+            html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["reply"]).collect();
 
-        let mut posts: VecDeque<NodeRef> = VecDeque::new();
-        posts.push_back(op);
-
-        let replies_element =
-            html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["replies"]).next();
-
-        // If there are replies, add them to the posts.
-        if let Some(replies_element) = replies_element {
-            posts.extend(html::find_elements_with_classes(
-                replies_element,
-                local_name!("div"),
-                &["reply"],
-            ));
-        }
-
-        Ok(Box::new(GetPosts { posts }))
+        Ok(Box::new(GetReplies { replies }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError> {
-        let last_main_post = self
-            .get_all_posts()?
-            .last()
-            .ok_or_else(|| ChandlerError::Other("Could not get last post!".into()))?;
+    fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
+        if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            let last_reply_parent = last_original_reply
+                .node
+                .parent()
+                .ok_or_else(|| ChandlerError::Other("No parent found for last reply post!".into()))?;
 
-        let replies_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["replies"])
-            .next()
-            .ok_or_else(|| ChandlerError::Other("Could not get replies element!".into()))?;
+            let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-        let mut new_posts: Vec<KusabaxPost> = Vec::new();
+            for new_reply in new.get_all_replies()? {
+                if new_reply.id <= last_original_reply.id {
+                    continue;
+                }
 
-        for other_post in other.get_all_posts()? {
-            if other_post.id <= last_main_post.id {
-                continue;
+                // Append it to replies element.
+                last_reply_parent.append(new_reply.node.clone());
+
+                new_replies.push(new_reply);
             }
 
-            // Append it to replies element.
-            replies_element.append(other_post.node.clone());
+            Ok(new_replies)
+        } else {
+            // If original thread has no replies, replace the entire replies element with the new one...
 
-            new_posts.push(other_post);
+            // Get original replies element.
+            let original_replies_element =
+                html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["replies"])
+                    .next()
+                    .ok_or_else(|| ChandlerError::Other("Could not get original replies element!".into()))?;
+
+            // Get new thread element.
+            let new_replies_element =
+                html::find_elements_with_classes(new.root.clone(), local_name!("div"), &["replies"])
+                    .next()
+                    .ok_or_else(|| ChandlerError::Other("Could not get new replies element!".into()))?;
+
+            // Insert the new thread element before the original one.
+            original_replies_element.insert_before(new_replies_element.clone());
+
+            // Remove the old thread element.
+            original_replies_element.detach();
+
+            Ok(self.get_all_replies()?.collect())
         }
-
-        Ok(new_posts)
     }
 
-    fn for_post_links(
+    fn for_reply_links(
         &self,
-        post: &Self::Post,
+        reply: &Self::Reply,
         mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(post.node.clone());
+        let links = html::find_links(reply.node.clone());
 
         for link in links.into_iter() {
             action(link)?;
@@ -212,8 +216,8 @@ mod tests {
         let thread2 = KusabaxThread::from_document(node2);
         let thread3 = KusabaxThread::from_document(node3);
 
-        thread1.merge_posts_from(&thread2).unwrap();
-        thread1.merge_posts_from(&thread3).unwrap();
+        thread1.merge_replies_from(thread2).unwrap();
+        thread1.merge_replies_from(thread3).unwrap();
 
         let node1 = thread1.into_document();
 

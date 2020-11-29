@@ -15,17 +15,17 @@ pub struct FoolFuukaThread {
 }
 
 #[derive(Clone, Debug)]
-pub struct FoolFuukaPost {
+pub struct FoolFuukaReply {
     pub id: u32,
     pub node: NodeRef,
 }
 
-impl FoolFuukaPost {
+impl FoolFuukaReply {
     pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get post ID from node
+        // Try to get reply ID from node.
         let id = (|| {
             if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute
+                // Try to locate "id" attribute.
                 if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
                     // Try to parse it as an integer.
                     return Some(id_attr.parse::<u32>().unwrap());
@@ -35,22 +35,22 @@ impl FoolFuukaPost {
             None
         })();
 
-        // Convert ID and node into post if found
+        // Convert ID and node into reply if found
         id.map(|id| Self { id, node })
     }
 }
 
-struct GetPosts {
-    posts: VecDeque<NodeRef>,
+struct GetReplies {
+    replies: VecDeque<NodeRef>,
 }
 
-impl Iterator for GetPosts {
-    type Item = FoolFuukaPost;
+impl Iterator for GetReplies {
+    type Item = FoolFuukaReply;
 
-    fn next(&mut self) -> Option<FoolFuukaPost> {
-        while let Some(node) = self.posts.pop_front() {
-            if let Some(post) = FoolFuukaPost::from_node(node) {
-                return Some(post);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node) = self.replies.pop_front() {
+            if let Some(reply) = Self::Item::from_node(node) {
+                return Some(reply);
             }
         }
 
@@ -102,38 +102,38 @@ impl HtmlDocument for FoolFuukaThread {
 }
 
 impl MergeableImageboardThread for FoolFuukaThread {
-    type Post = FoolFuukaPost;
+    type Reply = FoolFuukaReply;
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
-        let posts: VecDeque<NodeRef> =
+    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
+        let replies: VecDeque<NodeRef> =
             html::find_elements_with_classes(self.root.clone(), local_name!("article"), &["post"]).collect();
 
-        Ok(Box::new(GetPosts { posts }))
+        Ok(Box::new(GetReplies { replies }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError> {
-        if let Some(last_main_post) = self.get_all_posts()?.last() {
-            let last_reply_parent = last_main_post
+    fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
+        if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            let last_original_reply_parent = last_original_reply
                 .node
                 .parent()
-                .ok_or_else(|| ChandlerError::Other("No parent found for last reply post!".into()))?;
+                .ok_or_else(|| ChandlerError::Other("No parent found for last original reply!".into()))?;
 
-            let mut new_posts: Vec<FoolFuukaPost> = Vec::new();
+            let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-            for other_post in other.get_all_posts()? {
-                if other_post.id <= last_main_post.id {
+            for new_reply in new.get_all_replies()? {
+                if new_reply.id <= last_original_reply.id {
                     continue;
                 }
 
                 // Append it to replies element.
-                last_reply_parent.append(other_post.node.clone());
+                last_original_reply_parent.append(new_reply.node.clone());
 
-                new_posts.push(other_post);
+                new_replies.push(new_reply);
             }
 
-            Ok(new_posts)
+            Ok(new_replies)
         } else {
-            // If original thread has no posts, replace the entire thread element with the new one...
+            // If original thread has no replies, replace the entire thread element with the new one...
 
             // Get original thread element.
             let original_thread_element =
@@ -142,27 +142,27 @@ impl MergeableImageboardThread for FoolFuukaThread {
                     .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
 
             // Get new thread element.
-            let other_thread_element =
-                html::find_elements_with_classes(other.root.clone(), local_name!("article"), &["thread"])
+            let new_thread_element =
+                html::find_elements_with_classes(new.root.clone(), local_name!("article"), &["thread"])
                     .next()
                     .ok_or_else(|| ChandlerError::Other("No thread element found in other thread!".into()))?;
 
             // Insert the new thread element before the original one.
-            original_thread_element.insert_before(other_thread_element.clone());
+            original_thread_element.insert_before(new_thread_element.clone());
 
             // Remove the old thread element.
             original_thread_element.detach();
 
-            Ok(self.get_all_posts()?.collect())
+            Ok(self.get_all_replies()?.collect())
         }
     }
 
-    fn for_post_links(
+    fn for_reply_links(
         &self,
-        post: &Self::Post,
+        reply: &Self::Reply,
         mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(post.node.clone());
+        let links = html::find_links(reply.node.clone());
 
         for link in links.into_iter() {
             action(link)?;
@@ -207,8 +207,8 @@ mod tests {
         let thread2 = FoolFuukaThread::from_document(node2);
         let thread3 = FoolFuukaThread::from_document(node3);
 
-        thread1.merge_posts_from(&thread2).unwrap();
-        thread1.merge_posts_from(&thread3).unwrap();
+        thread1.merge_replies_from(thread2).unwrap();
+        thread1.merge_replies_from(thread3).unwrap();
 
         let node1 = thread1.into_document();
 

@@ -14,19 +14,19 @@ pub struct FourchanThread {
 }
 
 #[derive(Clone, Debug)]
-pub struct FourchanPost {
+pub struct FourchanReply {
     pub id: u32,
     pub node: NodeRef,
 }
 
-impl FourchanPost {
+impl FourchanReply {
     pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get post ID from node
+        // Try to get reply ID from node.
         let id = (|| {
             if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute
+                // Try to locate "id" attribute.
                 if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
-                    // Try to parse it as an integer, skipping the "pc" prefix
+                    // Try to parse it as an integer, skipping the "pc" prefix.
                     if let Ok(id) = id_attr[2..].parse::<u32>() {
                         return Some(id);
                     }
@@ -36,22 +36,22 @@ impl FourchanPost {
             None
         })();
 
-        // Convert ID and node into post if found
+        // Convert ID and node into reply if found.
         id.map(|id| Self { id, node })
     }
 }
 
-struct GetPosts {
-    posts: VecDeque<NodeRef>,
+struct GetReplies {
+    replies: VecDeque<NodeRef>,
 }
 
-impl Iterator for GetPosts {
-    type Item = FourchanPost;
+impl Iterator for GetReplies {
+    type Item = FourchanReply;
 
-    fn next(&mut self) -> Option<FourchanPost> {
-        while let Some(node) = self.posts.pop_front() {
-            if let Some(post) = FourchanPost::from_node(node) {
-                return Some(post);
+    fn next(&mut self) -> Option<FourchanReply> {
+        while let Some(node) = self.replies.pop_front() {
+            if let Some(reply) = FourchanReply::from_node(node) {
+                return Some(reply);
             }
         }
 
@@ -103,51 +103,51 @@ impl HtmlDocument for FourchanThread {
 }
 
 impl MergeableImageboardThread for FourchanThread {
-    type Post = FourchanPost;
+    type Reply = FourchanReply;
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
+    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
             .ok_or_else(|| ChandlerError::Other("Error getting thread element!".into()))?;
 
-        let posts = thread_element.children().collect();
+        let replies = thread_element.children().collect();
 
-        Ok(Box::new(GetPosts { posts }))
+        Ok(Box::new(GetReplies { replies }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError> {
-        let last_main_post = self
-            .get_all_posts()?
+    fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
+        let last_original_reply = self
+            .get_all_replies()?
             .last()
-            .ok_or_else(|| ChandlerError::Other("Could not get last post!".into()))?;
+            .ok_or_else(|| ChandlerError::Other("Could not get last original reply!".into()))?;
 
-        let main_post_parent = last_main_post
+        let last_original_reply_parent = last_original_reply
             .node
             .parent()
-            .ok_or_else(|| ChandlerError::Other("Could not get main post parent node!".into()))?;
+            .ok_or_else(|| ChandlerError::Other("Could not get last original reply parent node!".into()))?;
 
-        let mut new_posts: Vec<FourchanPost> = Vec::new();
+        let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-        for other_post in other.get_all_posts()? {
-            if other_post.id <= last_main_post.id {
+        for new_reply in new.get_all_replies()? {
+            if new_reply.id <= last_original_reply.id {
                 continue;
             }
 
-            // Append it to main thread
-            main_post_parent.append(other_post.node.clone());
+            // Append it to original thread.
+            last_original_reply_parent.append(new_reply.node.clone());
 
-            new_posts.push(other_post);
+            new_replies.push(new_reply);
         }
 
-        Ok(new_posts)
+        Ok(new_replies)
     }
 
-    fn for_post_links(
+    fn for_reply_links(
         &self,
-        post: &Self::Post,
+        reply: &Self::Reply,
         mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(post.node.clone());
+        let links = html::find_links(reply.node.clone());
 
         for link in links.into_iter() {
             action(link)?;
@@ -192,8 +192,8 @@ mod tests {
         let thread2 = FourchanThread::from_document(node2);
         let thread3 = FourchanThread::from_document(node3);
 
-        thread1.merge_posts_from(&thread2).unwrap();
-        thread1.merge_posts_from(&thread3).unwrap();
+        thread1.merge_replies_from(thread2).unwrap();
+        thread1.merge_replies_from(thread3).unwrap();
 
         let node1 = thread1.into_document();
 

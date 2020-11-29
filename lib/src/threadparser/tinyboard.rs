@@ -13,7 +13,7 @@ use crate::util;
 use super::*;
 
 lazy_static! {
-    static ref REGEX_GET_POST_ID: Regex = Regex::new(r#"^(?:op|reply)_(\d+)"#).unwrap();
+    static ref REGEX_GET_REPLY_ID: Regex = Regex::new(r#"^(?:op|reply)_(\d+)"#).unwrap();
 }
 
 pub struct TinyboardThread {
@@ -21,20 +21,20 @@ pub struct TinyboardThread {
 }
 
 #[derive(Clone, Debug)]
-pub struct TinyboardPost {
+pub struct TinyboardReply {
     pub id: u32,
     pub node: NodeRef,
 }
 
-impl TinyboardPost {
+impl TinyboardReply {
     pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get post ID from node
+        // Try to get reply ID from node.
         let id = (|| {
             if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute
+                // Try to locate "id" attribute.
                 if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
                     // Try to get post ID from attribute.
-                    if let Some(caps) = REGEX_GET_POST_ID.captures(id_attr) {
+                    if let Some(caps) = REGEX_GET_REPLY_ID.captures(id_attr) {
                         return Some(caps[1].parse::<u32>().unwrap());
                     }
                 }
@@ -43,22 +43,22 @@ impl TinyboardPost {
             None
         })();
 
-        // Convert ID and node into post if found
+        // Convert ID and node into reply if found.
         id.map(|id| Self { id, node })
     }
 }
 
-struct GetPosts {
-    posts: VecDeque<NodeRef>,
+struct GetReplies {
+    replies: VecDeque<NodeRef>,
 }
 
-impl Iterator for GetPosts {
-    type Item = TinyboardPost;
+impl Iterator for GetReplies {
+    type Item = TinyboardReply;
 
-    fn next(&mut self) -> Option<TinyboardPost> {
-        while let Some(node) = self.posts.pop_front() {
-            if let Some(post) = TinyboardPost::from_node(node) {
-                return Some(post);
+    fn next(&mut self) -> Option<TinyboardReply> {
+        while let Some(node) = self.replies.pop_front() {
+            if let Some(reply) = TinyboardReply::from_node(node) {
+                return Some(reply);
             }
         }
 
@@ -110,51 +110,51 @@ impl HtmlDocument for TinyboardThread {
 }
 
 impl MergeableImageboardThread for TinyboardThread {
-    type Post = TinyboardPost;
+    type Reply = TinyboardReply;
 
-    fn get_all_posts(&self) -> Result<Box<dyn Iterator<Item = Self::Post>>, ChandlerError> {
+    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
             .ok_or_else(|| ChandlerError::Other("Error getting thread element!".into()))?;
 
-        let posts = html::find_elements_with_classes(thread_element, local_name!("div"), &["post"]).collect();
+        let replies = html::find_elements_with_classes(thread_element, local_name!("div"), &["post"]).collect();
 
-        Ok(Box::new(GetPosts { posts }))
+        Ok(Box::new(GetReplies { replies }))
     }
 
-    fn merge_posts_from(&mut self, other: &Self) -> Result<Vec<Self::Post>, ChandlerError> {
-        let last_main_post = self
-            .get_all_posts()?
+    fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
+        let last_original_reply = self
+            .get_all_replies()?
             .last()
-            .ok_or_else(|| ChandlerError::Other("Could not get last post!".into()))?;
+            .ok_or_else(|| ChandlerError::Other("Could not get last reply in original thread!".into()))?;
 
-        let main_post_parent = last_main_post
+        let last_reply_parent = last_original_reply
             .node
             .parent()
-            .ok_or_else(|| ChandlerError::Other("Could not get main post parent node!".into()))?;
+            .ok_or_else(|| ChandlerError::Other("Could not get last original reply parent node!".into()))?;
 
-        let mut new_posts: Vec<TinyboardPost> = Vec::new();
+        let mut new_replies: Vec<TinyboardReply> = Vec::new();
 
-        for other_post in other.get_all_posts()? {
-            if other_post.id <= last_main_post.id {
+        for new_reply in new.get_all_replies()? {
+            if new_reply.id <= last_original_reply.id {
                 continue;
             }
 
-            // Append it to main thread
-            main_post_parent.append(other_post.node.clone());
+            // Append it to original thread.
+            last_reply_parent.append(new_reply.node.clone());
 
-            new_posts.push(other_post);
+            new_replies.push(new_reply);
         }
 
-        Ok(new_posts)
+        Ok(new_replies)
     }
 
-    fn for_post_links(
+    fn for_reply_links(
         &self,
-        post: &Self::Post,
+        reply: &Self::Reply,
         mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(post.node.clone());
+        let links = html::find_links(reply.node.clone());
 
         for link in links.into_iter() {
             action(link)?;
@@ -199,8 +199,8 @@ mod tests {
         let thread2 = TinyboardThread::from_document(node2);
         let thread3 = TinyboardThread::from_document(node3);
 
-        thread1.merge_posts_from(&thread2).unwrap();
-        thread1.merge_posts_from(&thread3).unwrap();
+        thread1.merge_replies_from(thread2).unwrap();
+        thread1.merge_replies_from(thread3).unwrap();
 
         let node1 = thread1.into_document();
 

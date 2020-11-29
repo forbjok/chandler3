@@ -19,7 +19,7 @@ impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
         // Purge all script tags from the thread HTML.
         self.thread.purge_scripts()?;
 
-        let new_post_count = self.thread.get_all_posts().map_or(0, |iter| iter.count()) as u32;
+        let new_post_count = (1 + self.thread.get_all_replies().map_or(0, |iter| iter.count())) as u32;
 
         let mut new_links: Vec<html::Link> = Vec::new();
 
@@ -45,22 +45,22 @@ impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
         // Parse new thread.
         let new_thread = TP::from_file(path)?;
 
+        let is_archived = new_thread.is_archived()?;
+
         // Merge posts from new thread into the main thread.
-        let new_posts = thread.merge_posts_from(&new_thread)?;
-        let new_post_count = new_posts.len() as u32;
+        let new_replies = thread.merge_replies_from(new_thread)?;
+        let new_post_count = new_replies.len() as u32;
 
         let mut new_links: Vec<html::Link> = Vec::new();
 
-        // Process links for all new posts.
-        for post in new_posts.iter() {
-            thread.for_post_links(&post, |link| {
+        // Process links for all new replies.
+        for reply in new_replies.iter() {
+            thread.for_reply_links(&reply, |link| {
                 new_links.push(link);
 
                 Ok(())
             })?;
         }
-
-        let is_archived = new_thread.is_archived()?;
 
         Ok(UpdateResult {
             is_archived,
