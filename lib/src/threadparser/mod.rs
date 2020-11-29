@@ -5,6 +5,7 @@ use crate::html;
 
 pub mod aspnetchan;
 pub mod basic;
+pub mod foolfuuka;
 pub mod fourchan;
 pub mod kusabax;
 pub mod tinyboard;

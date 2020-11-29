@@ -11,6 +11,7 @@ pub enum Parser {
     Tinyboard,
     AspNetChan,
     Kusabax,
+    FoolFuuka,
 }
 
 impl From<Parser> for ParserType {
@@ -21,6 +22,7 @@ impl From<Parser> for ParserType {
             Parser::Tinyboard => ParserType::Tinyboard,
             Parser::AspNetChan => ParserType::AspNetChan,
             Parser::Kusabax => ParserType::Kusabax,
+            Parser::FoolFuuka => ParserType::FoolFuuka,
         }
     }
 }
@@ -33,6 +35,7 @@ impl From<ParserType> for Parser {
             ParserType::Tinyboard => Parser::Tinyboard,
             ParserType::AspNetChan => Parser::AspNetChan,
             ParserType::Kusabax => Parser::Kusabax,
+            ParserType::FoolFuuka => Parser::FoolFuuka,
         }
     }
 }

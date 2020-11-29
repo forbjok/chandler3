@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::error::ChandlerError;
 use crate::html;
 use crate::threadparser::aspnetchan::AspNetChanThread;
+use crate::threadparser::foolfuuka::FoolFuukaThread;
 use crate::threadparser::fourchan::FourchanThread;
 use crate::threadparser::kusabax::KusabaxThread;
 use crate::threadparser::tinyboard::TinyboardThread;
@@ -20,6 +21,7 @@ pub enum ParserType {
     Tinyboard,
     AspNetChan,
     Kusabax,
+    FoolFuuka,
 }
 
 pub trait CreateThreadUpdater {
@@ -47,6 +49,7 @@ impl CreateThreadUpdater for ParserType {
             Self::Tinyboard => Box::new(MergingThreadUpdater::<TinyboardThread>::from_file(path)?),
             Self::AspNetChan => Box::new(MergingThreadUpdater::<AspNetChanThread>::from_file(path)?),
             Self::Kusabax => Box::new(MergingThreadUpdater::<KusabaxThread>::from_file(path)?),
+            Self::FoolFuuka => Box::new(MergingThreadUpdater::<FoolFuukaThread>::from_file(path)?),
         })
     }
 }
