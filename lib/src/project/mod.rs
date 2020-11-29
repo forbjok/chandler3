@@ -16,7 +16,7 @@ use crate::misc::site_resolver::{self, SiteResolver};
 use crate::threadupdater::{ParserType, ThreadUpdater};
 use crate::ui::*;
 
-const DEFAULT_DOWNLOAD_EXTENSIONS: &[&str] = &["css", "gif", "ico", "jpg", "png", "webm"];
+const DEFAULT_DOWNLOAD_EXTENSIONS: &[&str] = &["css", "gif", "ico", "jpeg", "jpg", "png", "webm"];
 
 #[derive(Clone, Copy, Debug)]
 pub enum ProjectFormat {
