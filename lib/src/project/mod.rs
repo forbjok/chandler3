@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 use log::info;
+use url::Url;
 
 pub mod common;
 mod v2;
@@ -225,6 +226,14 @@ impl CreateProjectBuilder {
             let path = path.ok_or_else(|| ChandlerError::CreateProject("No project path was specified!".into()))?;
             let format = format.unwrap_or(ProjectFormat::V3);
             let parser = parser.ok_or_else(|| ChandlerError::CreateProject("No parser type was specified!".into()))?;
+
+            let url = {
+                let mut url = Url::parse(&url).map_err(|err| {
+                    ChandlerError::Other(format!("Error parsing thread URL: {}", err.to_string()).into())
+                })?;
+                url.set_fragment(None);
+                url.to_string()
+            };
 
             Ok(match format {
                 ProjectFormat::V2 => Box::new(v2::V2Project::create(&path, &url, parser)?),
