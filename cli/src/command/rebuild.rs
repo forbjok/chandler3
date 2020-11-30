@@ -4,9 +4,9 @@ use chandler::project;
 
 use crate::ui::*;
 
-use super::*;
+use crate::error::*;
 
-pub fn rebuild(path: &Path) -> Result<(), CommandError> {
+pub fn rebuild(path: &Path) -> Result<(), CliError> {
     // Try to load Chandler project
     let mut project = project::load(&path)?;
 

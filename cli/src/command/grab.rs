@@ -8,9 +8,9 @@ use chandler::project;
 use crate::ui::*;
 use crate::ProjectOptions;
 
-use super::*;
+use crate::error::*;
 
-pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandError> {
+pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CliError> {
     let mut project = project::builder()
         .url(url)
         .use_chandler_config()?
@@ -43,7 +43,7 @@ pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CommandEr
 
     project
         .update(&mut ui_handler)
-        .map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?;
+        .map_err(|err| CliError::new(CliErrorKind::Other, err.to_string()))?;
 
     project.save()?;
 

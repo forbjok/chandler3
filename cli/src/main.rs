@@ -5,6 +5,7 @@ use structopt::StructOpt;
 use strum_macros::EnumString;
 
 mod command;
+mod error;
 mod ui;
 
 use chandler::project;

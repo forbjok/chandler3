@@ -5,12 +5,13 @@ use std::time::Duration;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 
+use chandler::error::*;
 use chandler::project;
 
 use crate::ui::*;
 use crate::ProjectOptions;
 
-use super::*;
+use crate::error::*;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
@@ -20,7 +21,7 @@ lazy_static! {
     static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}");
 }
 
-pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CommandError> {
+pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CliError> {
     let mut project = project::builder()
         .url(url)
         .use_chandler_config()?
@@ -68,7 +69,7 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
                 continue 'watch;
             }
 
-            result.map_err(|err| CommandError::new(CommandErrorKind::Other, err.to_string()))?
+            result.map_err(|err| CliError::new(CliErrorKind::Other, err.to_string()))?
         };
 
         // Save changes to disk.
