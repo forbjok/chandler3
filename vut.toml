@@ -1,0 +1,9 @@
+[general]
+ignore = "**/.git"
+
+[authoritative-version-source]
+type = "cargo"
+path = "lib"
+
+[[update-version-sources]]
+globs = "**"
