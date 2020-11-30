@@ -1,6 +1,7 @@
 use std::borrow::Cow;
-use std::fmt;
 use std::io;
+
+use thiserror::Error;
 
 use crate::util;
 
@@ -11,41 +12,30 @@ pub enum DownloadError {
     Other(Cow<'static, str>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ChandlerError {
+    #[error("Error creating project")]
     CreateProject(Cow<'static, str>),
+    #[error("Error loading project")]
     LoadProject(Cow<'static, str>),
+    #[error("Error opening config")]
     OpenConfig(util::FileError),
+    #[error("Error reading config")]
     ReadConfig(io::Error),
+    #[error("Error parsing config")]
     ParseConfig(Cow<'static, str>),
+    #[error("Configuration error")]
     Config(Cow<'static, str>),
+    #[error("Error opening file")]
     OpenFile(util::FileError),
+    #[error("Error creating file")]
     CreateFile(util::FileError),
+    #[error("Error reading file")]
     ReadFile(io::Error),
+    #[error("Error writing file")]
     WriteFile(io::Error),
+    #[error("Download error")]
     Download(DownloadError),
+    #[error("Error")]
     Other(Cow<'static, str>),
-}
-
-impl fmt::Display for ChandlerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::CreateProject(err) => write!(f, "{}", err),
-            Self::LoadProject(err) => write!(f, "{}", err),
-            Self::OpenConfig(err) => write!(f, "{}", err),
-            Self::ReadConfig(err) => write!(f, "{}", err),
-            Self::ParseConfig(err) => write!(f, "{}", err),
-            Self::Config(err) => write!(f, "{}", err),
-            Self::OpenFile(err) => write!(f, "{}", err),
-            Self::CreateFile(err) => write!(f, "{}", err),
-            Self::ReadFile(err) => write!(f, "{}", err),
-            Self::WriteFile(err) => write!(f, "{}", err),
-            Self::Download(err) => match err {
-                DownloadError::Http { code, description } => write!(f, "{} {}", code, description),
-                DownloadError::Network(err) => write!(f, "{}", err),
-                DownloadError::Other(err) => write!(f, "{}", err),
-            },
-            Self::Other(err) => write!(f, "{}", err),
-        }
-    }
 }
