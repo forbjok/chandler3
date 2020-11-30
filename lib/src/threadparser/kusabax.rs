@@ -13,7 +13,7 @@ use crate::util;
 use super::*;
 
 lazy_static! {
-    static ref REGEX_GET_POST_ID: Regex = Regex::new(r#"^(?:reply_)?(\d+)"#).unwrap();
+    static ref REGEX_GET_REPLY_ID: Regex = Regex::new(r#"^reply_(\d+)"#).unwrap();
 }
 
 pub struct KusabaxThread {
@@ -34,7 +34,7 @@ impl KusabaxReply {
                 // Try to locate "id" attribute.
                 if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
                     // Try to get post ID from attribute.
-                    if let Some(caps) = REGEX_GET_POST_ID.captures(id_attr) {
+                    if let Some(caps) = REGEX_GET_REPLY_ID.captures(id_attr) {
                         return Some(caps[1].parse::<u32>().unwrap());
                     }
                 }
@@ -120,49 +120,43 @@ impl MergeableImageboardThread for KusabaxThread {
     }
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
-        if let Some(last_original_reply) = self.get_all_replies()?.last() {
-            let last_reply_parent = last_original_reply
-                .node
-                .parent()
-                .ok_or_else(|| ChandlerError::Other("No parent found for last reply post!".into()))?;
+        // Create temporary insert marker node.
+        let insert_marker_node = NodeRef::new_comment("INSERT");
 
-            let mut new_replies: Vec<Self::Reply> = Vec::new();
+        let last_reply_id = if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            last_original_reply.node.insert_after(insert_marker_node.clone());
 
-            for new_reply in new.get_all_replies()? {
-                if new_reply.id <= last_original_reply.id {
-                    continue;
-                }
-
-                // Append it to replies element.
-                last_reply_parent.append(new_reply.node.clone());
-
-                new_replies.push(new_reply);
-            }
-
-            Ok(new_replies)
+            last_original_reply.id
         } else {
-            // If original thread has no replies, replace the entire replies element with the new one...
-
             // Get original replies element.
             let original_replies_element =
                 html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["replies"])
                     .next()
-                    .ok_or_else(|| ChandlerError::Other("Could not get original replies element!".into()))?;
+                    .ok_or_else(|| ChandlerError::Other("No replies element found in original thread!".into()))?;
 
-            // Get new thread element.
-            let new_replies_element =
-                html::find_elements_with_classes(new.root.clone(), local_name!("div"), &["replies"])
-                    .next()
-                    .ok_or_else(|| ChandlerError::Other("Could not get new replies element!".into()))?;
+            // Append the insert marker node to the original thread element.
+            original_replies_element.append(insert_marker_node.clone());
 
-            // Insert the new thread element before the original one.
-            original_replies_element.insert_before(new_replies_element.clone());
+            0
+        };
 
-            // Remove the old thread element.
-            original_replies_element.detach();
+        let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-            Ok(self.get_all_replies()?.collect())
+        for new_reply in new.get_all_replies()? {
+            if new_reply.id <= last_reply_id {
+                continue;
+            }
+
+            // Append it to original thread.
+            insert_marker_node.insert_before(new_reply.node.clone());
+
+            new_replies.push(new_reply);
         }
+
+        // Remove temporary insert marker node.
+        insert_marker_node.detach();
+
+        Ok(new_replies)
     }
 
     fn for_reply_links(

@@ -112,49 +112,43 @@ impl MergeableImageboardThread for FoolFuukaThread {
     }
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
-        if let Some(last_original_reply) = self.get_all_replies()?.last() {
-            let last_original_reply_parent = last_original_reply
-                .node
-                .parent()
-                .ok_or_else(|| ChandlerError::Other("No parent found for last original reply!".into()))?;
+        // Create temporary insert marker node.
+        let insert_marker_node = NodeRef::new_comment("INSERT");
 
-            let mut new_replies: Vec<Self::Reply> = Vec::new();
+        let last_reply_id = if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            last_original_reply.node.insert_after(insert_marker_node.clone());
 
-            for new_reply in new.get_all_replies()? {
-                if new_reply.id <= last_original_reply.id {
-                    continue;
-                }
-
-                // Append it to replies element.
-                last_original_reply_parent.append(new_reply.node.clone());
-
-                new_replies.push(new_reply);
-            }
-
-            Ok(new_replies)
+            last_original_reply.id
         } else {
-            // If original thread has no replies, replace the entire thread element with the new one...
-
             // Get original thread element.
             let original_thread_element =
-                html::find_elements_with_classes(self.root.clone(), local_name!("article"), &["thread"])
+                html::find_elements_with_classes(self.root.clone(), local_name!("aside"), &["posts"])
                     .next()
                     .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
 
-            // Get new thread element.
-            let new_thread_element =
-                html::find_elements_with_classes(new.root.clone(), local_name!("article"), &["thread"])
-                    .next()
-                    .ok_or_else(|| ChandlerError::Other("No thread element found in other thread!".into()))?;
+            // Append the insert marker node to the original thread element.
+            original_thread_element.append(insert_marker_node.clone());
 
-            // Insert the new thread element before the original one.
-            original_thread_element.insert_before(new_thread_element.clone());
+            0
+        };
 
-            // Remove the old thread element.
-            original_thread_element.detach();
+        let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-            Ok(self.get_all_replies()?.collect())
+        for new_reply in new.get_all_replies()? {
+            if new_reply.id <= last_reply_id {
+                continue;
+            }
+
+            // Append it to original thread.
+            insert_marker_node.insert_before(new_reply.node.clone());
+
+            new_replies.push(new_reply);
         }
+
+        // Remove temporary insert marker node.
+        insert_marker_node.detach();
+
+        Ok(new_replies)
     }
 
     fn for_reply_links(
@@ -183,7 +177,8 @@ mod tests {
     use super::*;
 
     // Original thread with OP only
-    const THREAD1: &'static str = r#"<article id="1" class="thread post_is_op"></article>"#;
+    const THREAD1: &'static str =
+        r#"<article id="1" class="thread post_is_op"><aside class="posts"></aside></article>"#;
 
     // Thread with 2 posts
     const THREAD2: &'static str = r#"<article id="1" class="thread post_is_op"><aside class="posts"><article class="post" id="2"></article></aside></article>"#;

@@ -107,39 +107,50 @@ impl MergeableImageboardThread for AspNetChanThread {
     type Reply = AspNetChanReply;
 
     fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
-        let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
-            .next()
-            .ok_or_else(|| ChandlerError::Other("Error getting thread element!".into()))?;
-
-        let replies =
-            html::find_elements_with_classes(thread_element, local_name!("div"), &["post-container"]).collect();
+        let replies: VecDeque<NodeRef> =
+            html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["post-container"])
+                .skip(1)
+                .collect();
 
         Ok(Box::new(GetReplies { replies }))
     }
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
-        let last_original_reply = self
-            .get_all_replies()?
-            .last()
-            .ok_or_else(|| ChandlerError::Other("Could not get last original reply!".into()))?;
+        // Create temporary insert marker node.
+        let insert_marker_node = NodeRef::new_comment("INSERT");
 
-        let last_original_reply_parent = last_original_reply
-            .node
-            .parent()
-            .ok_or_else(|| ChandlerError::Other("Could not get last original reply parent node!".into()))?;
+        let last_reply_id = if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            last_original_reply.node.insert_after(insert_marker_node.clone());
 
-        let mut new_replies: Vec<AspNetChanReply> = Vec::new();
+            last_original_reply.id
+        } else {
+            // Get original thread element.
+            let original_thread_element =
+                html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
+                    .next()
+                    .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
+
+            // Append the insert marker node to the original thread element.
+            original_thread_element.append(insert_marker_node.clone());
+
+            0
+        };
+
+        let mut new_replies: Vec<Self::Reply> = Vec::new();
 
         for new_reply in new.get_all_replies()? {
-            if new_reply.id <= last_original_reply.id {
+            if new_reply.id <= last_reply_id {
                 continue;
             }
 
-            // Append it to main thread
-            last_original_reply_parent.append(new_reply.node.clone());
+            // Append it to original thread.
+            insert_marker_node.insert_before(new_reply.node.clone());
 
             new_replies.push(new_reply);
         }
+
+        // Remove temporary insert marker node.
+        insert_marker_node.detach();
 
         Ok(new_replies)
     }

@@ -108,36 +108,49 @@ impl MergeableImageboardThread for FourchanThread {
     fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
         let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
             .next()
-            .ok_or_else(|| ChandlerError::Other("Error getting thread element!".into()))?;
+            .ok_or_else(|| ChandlerError::Other("No thread element found!".into()))?;
 
-        let replies = thread_element.children().collect();
+        let replies = thread_element.children().skip(1).collect();
 
         Ok(Box::new(GetReplies { replies }))
     }
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
-        let last_original_reply = self
-            .get_all_replies()?
-            .last()
-            .ok_or_else(|| ChandlerError::Other("Could not get last original reply!".into()))?;
+        // Create temporary insert marker node.
+        let insert_marker_node = NodeRef::new_comment("INSERT");
 
-        let last_original_reply_parent = last_original_reply
-            .node
-            .parent()
-            .ok_or_else(|| ChandlerError::Other("Could not get last original reply parent node!".into()))?;
+        let last_reply_id = if let Some(last_original_reply) = self.get_all_replies()?.last() {
+            last_original_reply.node.insert_after(insert_marker_node.clone());
+
+            last_original_reply.id
+        } else {
+            // Get original thread element.
+            let original_thread_element =
+                html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
+                    .next()
+                    .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
+
+            // Append the insert marker node to the original thread element.
+            original_thread_element.append(insert_marker_node.clone());
+
+            0
+        };
 
         let mut new_replies: Vec<Self::Reply> = Vec::new();
 
         for new_reply in new.get_all_replies()? {
-            if new_reply.id <= last_original_reply.id {
+            if new_reply.id <= last_reply_id {
                 continue;
             }
 
             // Append it to original thread.
-            last_original_reply_parent.append(new_reply.node.clone());
+            insert_marker_node.insert_before(new_reply.node.clone());
 
             new_replies.push(new_reply);
         }
+
+        // Remove temporary insert marker node.
+        insert_marker_node.detach();
 
         Ok(new_replies)
     }
@@ -168,16 +181,16 @@ mod tests {
     use super::*;
 
     // Original thread with OP only
-    const THREAD1: &'static str = r#"<div class="thread" id="t1"><div class="postContainer" id="pc1"></div></div>"#;
+    const THREAD1: &'static str = r#"<div class="thread" id="t1"><div class="opContainer" id="pc1"></div></div>"#;
 
     // Thread with 2 posts
-    const THREAD2: &'static str = r#"<div class="thread" id="t1"><div class="postContainer" id="pc1"></div><div class="postContainer" id="pc2"></div></div>"#;
+    const THREAD2: &'static str = r#"<div class="thread" id="t1"><div class="opContainer" id="pc1"></div><div class="replyContainer" id="pc2"></div></div>"#;
 
     // Thread with post 2 deleted and a new post 3 added
-    const THREAD3: &'static str = r#"<div class="thread" id="t1"><div class="postContainer" id="pc1"></div><div class="postContainer" id="pc3"></div></div>"#;
+    const THREAD3: &'static str = r#"<div class="thread" id="t1"><div class="opContainer" id="pc1"></div><div class="replyContainer" id="pc3"></div></div>"#;
 
     // Merged thread with all 3 posts
-    const THREAD_MERGED: &'static str = r#"<div class="thread" id="t1"><div class="postContainer" id="pc1"></div><div class="postContainer" id="pc2"></div><div class="postContainer" id="pc3"></div></div>"#;
+    const THREAD_MERGED: &'static str = r#"<div class="thread" id="t1"><div class="opContainer" id="pc1"></div><div class="replyContainer" id="pc2"></div><div class="replyContainer" id="pc3"></div></div>"#;
 
     #[test]
     fn can_merge_threads() {
