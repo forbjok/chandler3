@@ -1,8 +1,8 @@
 mod fs;
 mod path;
 pub mod pid;
-mod vec;
+mod slice;
 
 pub use self::fs::*;
 pub use self::path::*;
-pub use self::vec::*;
+pub use self::slice::*;
