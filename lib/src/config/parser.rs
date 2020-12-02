@@ -13,6 +13,7 @@ pub enum Parser {
     Kusabax,
     FoolFuuka,
     Ponychan,
+    Lainchan,
 }
 
 impl From<Parser> for ParserType {
@@ -25,6 +26,7 @@ impl From<Parser> for ParserType {
             Parser::Kusabax => ParserType::Kusabax,
             Parser::FoolFuuka => ParserType::FoolFuuka,
             Parser::Ponychan => ParserType::Ponychan,
+            Parser::Lainchan => ParserType::Lainchan,
         }
     }
 }
@@ -39,6 +41,7 @@ impl From<ParserType> for Parser {
             ParserType::Kusabax => Parser::Kusabax,
             ParserType::FoolFuuka => Parser::FoolFuuka,
             ParserType::Ponychan => Parser::Ponychan,
+            ParserType::Lainchan => Parser::Lainchan,
         }
     }
 }

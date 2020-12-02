@@ -6,6 +6,7 @@ use crate::threadparser::aspnetchan::AspNetChanThread;
 use crate::threadparser::foolfuuka::FoolFuukaThread;
 use crate::threadparser::fourchan::FourchanThread;
 use crate::threadparser::kusabax::KusabaxThread;
+use crate::threadparser::lainchan::LainchanThread;
 use crate::threadparser::ponychan::PonychanThread;
 use crate::threadparser::tinyboard::TinyboardThread;
 
@@ -24,6 +25,7 @@ pub enum ParserType {
     Kusabax,
     FoolFuuka,
     Ponychan,
+    Lainchan,
 }
 
 pub trait CreateThreadUpdater {
@@ -53,6 +55,7 @@ impl CreateThreadUpdater for ParserType {
             Self::Kusabax => Box::new(MergingThreadUpdater::<KusabaxThread>::from_file(path)?),
             Self::FoolFuuka => Box::new(MergingThreadUpdater::<FoolFuukaThread>::from_file(path)?),
             Self::Ponychan => Box::new(MergingThreadUpdater::<PonychanThread>::from_file(path)?),
+            Self::Lainchan => Box::new(MergingThreadUpdater::<LainchanThread>::from_file(path)?),
         })
     }
 }
