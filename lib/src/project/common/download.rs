@@ -50,6 +50,7 @@ pub fn download_file(
     let result = (|| {
         let client = reqwest::blocking::Client::builder()
             .user_agent(&*USER_AGENT)
+            .gzip(true)
             .build()
             .map_err(|err| ChandlerError::Other(format!("Error building HTTP client: {}", err.to_string()).into()))?;
 
