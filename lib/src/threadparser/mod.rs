@@ -8,6 +8,7 @@ pub mod basic;
 pub mod foolfuuka;
 pub mod fourchan;
 pub mod kusabax;
+pub mod ponychan;
 pub mod tinyboard;
 
 pub trait HtmlDocument: Sized {

@@ -12,6 +12,7 @@ pub enum Parser {
     AspNetChan,
     Kusabax,
     FoolFuuka,
+    Ponychan,
 }
 
 impl From<Parser> for ParserType {
@@ -23,6 +24,7 @@ impl From<Parser> for ParserType {
             Parser::AspNetChan => ParserType::AspNetChan,
             Parser::Kusabax => ParserType::Kusabax,
             Parser::FoolFuuka => ParserType::FoolFuuka,
+            Parser::Ponychan => ParserType::Ponychan,
         }
     }
 }
@@ -36,6 +38,7 @@ impl From<ParserType> for Parser {
             ParserType::AspNetChan => Parser::AspNetChan,
             ParserType::Kusabax => Parser::Kusabax,
             ParserType::FoolFuuka => Parser::FoolFuuka,
+            ParserType::Ponychan => Parser::Ponychan,
         }
     }
 }
