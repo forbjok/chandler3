@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
+use std::iter;
 
-use html5ever::local_name;
+use html5ever::{local_name, namespace_url, ns, QualName};
 use kuchiki::*;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -128,18 +129,18 @@ impl MergeableImageboardThread for TinyboardThread {
 
             last_original_reply.id
         } else {
-            // Get original thread element.
-            let original_thread_element =
-                html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
-                    .next()
-                    .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
+            // Get original OP element.
+            let original_op_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["op"])
+                .next()
+                .ok_or_else(|| ChandlerError::Other("No OP element found in original thread!".into()))?;
 
-            // Append the insert marker node to the original thread element.
-            original_thread_element.append(insert_marker_node.clone());
+            // Insert the insert marker node after the original OP element.
+            original_op_element.insert_after(insert_marker_node.clone());
 
             0
         };
 
+        let mut first_reply = last_reply_id == 0;
         let mut new_replies: Vec<Self::Reply> = Vec::new();
 
         for new_reply in new.get_all_replies()? {
@@ -147,10 +148,20 @@ impl MergeableImageboardThread for TinyboardThread {
                 continue;
             }
 
-            // Append it to original thread.
+            // Unless it's the first reply, insert a <br> before the reply.
+            if !first_reply {
+                insert_marker_node.insert_before(NodeRef::new_element(
+                    QualName::new(None, ns!(html), local_name!("br")),
+                    iter::empty(),
+                ));
+            }
+
+            // Append the reply to the original thread.
             insert_marker_node.insert_before(new_reply.node.clone());
 
             new_replies.push(new_reply);
+
+            first_reply = false;
         }
 
         // Remove temporary insert marker node.
@@ -194,7 +205,7 @@ mod tests {
     const THREAD3: &'static str = r#"<div class="thread" id="thread_1"><div class="post op" id="op_1"></div><div class="post reply" id="reply_3"></div></div>"#;
 
     // Merged thread with all 3 posts
-    const THREAD_MERGED: &'static str = r#"<div class="thread" id="thread_1"><div class="post op" id="op_1"></div><div class="post reply" id="reply_2"></div><div class="post reply" id="reply_3"></div></div>"#;
+    const THREAD_MERGED: &'static str = r#"<div class="thread" id="thread_1"><div class="post op" id="op_1"></div><div class="post reply" id="reply_2"></div><br><div class="post reply" id="reply_3"></div></div>"#;
 
     #[test]
     fn can_merge_threads() {
