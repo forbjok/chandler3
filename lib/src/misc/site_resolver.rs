@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 use lazy_static::lazy_static;
@@ -7,7 +8,7 @@ use crate::error::*;
 use crate::threadupdater::ParserType;
 
 lazy_static! {
-    static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.]+)/(?:(.+)/)*([^\.]+).*"#).unwrap();
+    static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.:]+)/(?:(.+)/)*([^\.]+).*"#).unwrap();
 }
 
 pub struct SiteInfo {
@@ -30,13 +31,22 @@ pub fn unknown_site(url: &str) -> Result<SiteInfo, ChandlerError> {
     let thread = &caps[3];
 
     let mut path = PathBuf::new();
-    path.push(host);
-    path.push(board);
-    path.push(thread);
+    path.push(sanitize_path(host).as_ref());
+    path.push(sanitize_path(board).as_ref());
+    path.push(sanitize_path(thread).as_ref());
 
     Ok(SiteInfo {
         name: "unknown".to_owned(),
         parser: ParserType::Basic,
         path,
     })
+}
+
+/// Sanitize path to ensure it does not contain invalid filesystem characters.
+pub fn sanitize_path(s: &str) -> Cow<str> {
+    lazy_static! {
+        static ref SANITIZE_PATH_REGEX: Regex = Regex::new(r#":|\*|\|"#).unwrap();
+    }
+
+    SANITIZE_PATH_REGEX.replace_all(s, "_")
 }
