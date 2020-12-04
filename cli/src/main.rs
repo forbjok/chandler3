@@ -1,14 +1,20 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use log::{debug, LevelFilter};
+use log::{debug, error, info, LevelFilter};
 use structopt::StructOpt;
 use strum_macros::EnumString;
 
 mod command;
+mod config;
 mod error;
 mod ui;
 
 use chandler::project;
+use chandler::ui::*;
+
+use crate::ui::*;
 
 #[derive(Clone, Copy, Debug, EnumString)]
 #[strum(serialize_all = "lowercase")]
@@ -85,14 +91,64 @@ fn main() {
 
     debug!("Debug logging enabled.");
 
+    let cfg = match config::CliConfig::from_default_location() {
+        Ok(v) => v,
+        Err(err) => {
+            eprintln!("{}", err);
+
+            config::CliConfig::default()
+        }
+    };
+
+    // Cancellation boolean.
+    let cancel = Arc::new(AtomicBool::new(false));
+
+    // Set break (Ctrl-C) handler.
+    ctrlc::set_handler({
+        let cancel = Arc::clone(&cancel);
+
+        move || {
+            info!("Cancellation requested by user.");
+            cancel.store(true, Ordering::SeqCst);
+        }
+    })
+    .unwrap_or_else(|err| error!("Error setting Ctrl-C handler: {}", err));
+
+    // Create UI handler.
+    let mut ui: Box<dyn ChandlerUiHandler> = {
+        let cancel = Arc::clone(&cancel);
+
+        let cancel_check = Box::new(move || {
+            // If cancellation has been requested, break out immediately.
+            if cancel.load(Ordering::SeqCst) {
+                return true;
+            }
+
+            false
+        });
+
+        if cfg.progress.enable {
+            let progress_chars = match cfg.progress.bar_style {
+                config::CliProgressBarStyle::Dot => "●•·",
+                config::CliProgressBarStyle::Hash => "##·",
+                config::CliProgressBarStyle::Arrow => "=> ",
+            }
+            .to_owned();
+
+            Box::new(IndicatifUiHandler::new(progress_chars, cancel_check))
+        } else {
+            Box::new(StderrUiHandler::new(cancel_check))
+        }
+    };
+
     let cmd_result = match opt.command {
-        Command::Grab { url, project_options } => command::grab(&url, &project_options),
-        Command::Rebuild { path } => command::rebuild(&path),
+        Command::Grab { url, project_options } => command::grab(&url, &project_options, ui.as_mut()),
+        Command::Rebuild { path } => command::rebuild(&path, ui.as_mut()),
         Command::Watch {
             url,
             interval,
             project_options,
-        } => command::watch(&url, interval, &project_options),
+        } => command::watch(&url, interval, &project_options, ui.as_mut()),
     };
 
     match cmd_result {

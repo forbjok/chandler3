@@ -1,18 +1,15 @@
 use std::path::Path;
 
 use chandler::project;
-
-use crate::ui::*;
+use chandler::ui::*;
 
 use crate::error::*;
 
-pub fn rebuild(path: &Path) -> Result<(), CliError> {
-    // Try to load Chandler project
+pub fn rebuild(path: &Path, ui: &mut dyn ChandlerUiHandler) -> Result<(), CliError> {
+    // Try to load Chandler project.
     let mut project = project::load(&path)?;
 
-    let mut ui_handler = IndicatifUiHandler::new(Box::new(|| false));
-
-    project.rebuild(&mut ui_handler)?;
+    project.rebuild(ui)?;
 
     Ok(())
 }

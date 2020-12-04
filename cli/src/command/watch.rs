@@ -1,27 +1,23 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::time::Duration;
 
 use indicatif::{ProgressBar, ProgressStyle};
-use log::info;
 
 use chandler::error::*;
 use chandler::project;
+use chandler::ui::*;
 
-use crate::ui::*;
 use crate::ProjectOptions;
 
 use crate::error::*;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref WAITING_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}");
-}
-
-pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Result<(), CliError> {
+pub fn watch(
+    url: &str,
+    interval: i64,
+    project_options: &ProjectOptions,
+    ui: &mut dyn ChandlerUiHandler,
+) -> Result<(), CliError> {
     let mut project = project::builder()
         .url(url)
         .use_chandler_config()?
@@ -31,37 +27,15 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
 
     eprintln!("Project path: {}", project.get_path().display());
 
-    // Cancellation boolean.
-    let cancel = Arc::new(AtomicBool::new(false));
-
-    let break_cancel = cancel.clone();
-
-    // Set break (Ctrl-C) handler.
-    ctrlc::set_handler(move || {
-        info!("Cancellation requested by user.");
-        break_cancel.store(true, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
-
     let interval_seconds = interval as u64;
-
-    let ui_cancel = cancel.clone();
-    let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {
-        // If cancellation has been requested, break out immediately.
-        if ui_cancel.load(Ordering::SeqCst) {
-            return true;
-        }
-
-        false
-    }));
 
     'watch: loop {
         let update_result = {
-            let result = project.update(&mut ui_handler);
+            let result = project.update(ui);
 
             if let Err(ChandlerError::Download(_)) = &result {
                 // Wait for retry.
-                if !waiting_bar(interval_seconds, "seconds until retry...", &cancel) {
+                if !waiting_bar(interval_seconds, "seconds until retry...", ui) {
                     // If user requested cancellation, break out of the loop.
                     break 'watch;
                 }
@@ -82,7 +56,7 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
         }
 
         // Wait for next update.
-        if !waiting_bar(interval_seconds, "seconds until update...", &cancel) {
+        if !waiting_bar(interval_seconds, "seconds until update...", ui) {
             // If user requested cancellation, break out of the loop.
             break 'watch;
         }
@@ -92,11 +66,11 @@ pub fn watch(url: &str, interval: i64, project_options: &ProjectOptions) -> Resu
 }
 
 /// Wait with progress indicator.
-fn waiting_bar(wait_seconds: u64, message: &str, cancel: &Arc<AtomicBool>) -> bool {
+fn waiting_bar(wait_seconds: u64, message: &str, ui: &mut dyn ChandlerUiHandler) -> bool {
     let mut seconds_passed: u64 = 0;
 
     let waiting_bar = ProgressBar::new(wait_seconds)
-        .with_style((*WAITING_BAR_STYLE).clone())
+        .with_style(ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}"))
         .with_prefix("Waiting")
         .with_message(message)
         .with_position(wait_seconds);
@@ -107,7 +81,7 @@ fn waiting_bar(wait_seconds: u64, message: &str, cancel: &Arc<AtomicBool>) -> bo
     // Wait until the specified time has passed.
     while seconds_passed < wait_seconds {
         // If cancellation has been requested, break out immediately.
-        if cancel.load(Ordering::SeqCst) {
+        if ui.is_cancelled() {
             return false;
         }
 

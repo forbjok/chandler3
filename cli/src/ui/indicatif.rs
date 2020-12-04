@@ -1,21 +1,9 @@
 use indicatif::{ProgressBar, ProgressStyle};
 
-use lazy_static::lazy_static;
-
 use chandler::ui::*;
 
-lazy_static! {
-    static ref OVERALL_DOWNLOAD_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar()
-        .template(" {prefix:>8} [{bar:40.cyan/blue}] {pos}/{len} {wide_msg}")
-        .progress_chars("##-");
-    static ref DOWNLOAD_BAR_STYLE: ProgressStyle = ProgressStyle::default_bar()
-        .template(" {prefix:>8} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {wide_msg}")
-        .progress_chars("##-");
-    static ref DOWNLOAD_SPINNER_STYLE: ProgressStyle =
-        ProgressStyle::default_spinner().template(" {prefix:>8} {bytes}/? {wide_msg}");
-}
-
 pub struct IndicatifUiHandler {
+    progress_chars: String,
     cancel_check: Box<dyn Fn() -> bool>,
 
     overall_download_bar: Option<ProgressBar>,
@@ -24,8 +12,9 @@ pub struct IndicatifUiHandler {
 }
 
 impl IndicatifUiHandler {
-    pub fn new(cancel_check: Box<dyn Fn() -> bool>) -> Self {
+    pub fn new(progress_chars: String, cancel_check: Box<dyn Fn() -> bool>) -> Self {
         Self {
+            progress_chars,
             cancel_check,
 
             overall_download_bar: None,
@@ -40,7 +29,11 @@ impl ChandlerUiHandler for IndicatifUiHandler {
         match e {
             UiEvent::DownloadStart { file_count } => {
                 let bar = ProgressBar::new(*file_count as u64)
-                    .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone())
+                    .with_style(
+                        ProgressStyle::default_bar()
+                            .template(" {prefix:>8} [{bar:40.cyan/blue}] {pos}/{len} {wide_msg}")
+                            .progress_chars(&self.progress_chars),
+                    )
                     .with_prefix("Overall")
                     .with_message("files downloaded...");
 
@@ -68,7 +61,7 @@ impl ChandlerUiHandler for IndicatifUiHandler {
             }
             UiEvent::DownloadFileStart { url, .. } => {
                 let bar = ProgressBar::new(0)
-                    .with_style((*DOWNLOAD_SPINNER_STYLE).clone())
+                    .with_style(ProgressStyle::default_spinner().template(" {prefix:>8} {bytes}/? {wide_msg}"))
                     .with_prefix("Download")
                     .with_message(&url);
 
@@ -80,7 +73,11 @@ impl ChandlerUiHandler for IndicatifUiHandler {
             UiEvent::DownloadFileInfo { size } => {
                 if let Some(bar) = &self.file_download_bar {
                     if let Some(size) = *size {
-                        bar.set_style((*DOWNLOAD_BAR_STYLE).clone());
+                        bar.set_style(
+                            ProgressStyle::default_bar()
+                                .template(" {prefix:>8} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {wide_msg}")
+                                .progress_chars(&self.progress_chars),
+                        );
                         bar.set_length(size);
                     }
                 }
@@ -121,7 +118,11 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 println!("Rebuilding project at {}...", path.display());
 
                 let bar = ProgressBar::new(*file_count as u64)
-                    .with_style((*OVERALL_DOWNLOAD_BAR_STYLE).clone())
+                    .with_style(
+                        ProgressStyle::default_bar()
+                            .template(" {prefix:>8} [{bar:40.cyan/blue}] {pos}/{len} {wide_msg}")
+                            .progress_chars(&self.progress_chars),
+                    )
                     .with_prefix("Rebuild");
 
                 self.rebuild_bar = Some(bar);

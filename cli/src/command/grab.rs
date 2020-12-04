@@ -1,16 +1,11 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-
-use log::info;
-
 use chandler::project;
+use chandler::ui::*;
 
-use crate::ui::*;
 use crate::ProjectOptions;
 
 use crate::error::*;
 
-pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CliError> {
+pub fn grab(url: &str, project_options: &ProjectOptions, ui: &mut dyn ChandlerUiHandler) -> Result<(), CliError> {
     let mut project = project::builder()
         .url(url)
         .use_chandler_config()?
@@ -20,29 +15,8 @@ pub fn grab(url: &str, project_options: &ProjectOptions) -> Result<(), CliError>
 
     eprintln!("Project path: {}", project.get_path().display());
 
-    // Cancellation boolean.
-    let cancel = Arc::new(AtomicBool::new(false));
-
-    let break_cancel = cancel.clone();
-
-    // Set break (Ctrl-C) handler.
-    ctrlc::set_handler(move || {
-        info!("Cancellation requested by user.");
-        break_cancel.store(true, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
-
-    let mut ui_handler = IndicatifUiHandler::new(Box::new(move || {
-        // If cancellation has been requested, break out immediately.
-        if cancel.load(Ordering::SeqCst) {
-            return true;
-        }
-
-        false
-    }));
-
     project
-        .update(&mut ui_handler)
+        .update(ui)
         .map_err(|err| CliError::new(CliErrorKind::Other, err.to_string()))?;
 
     project.save()?;
