@@ -129,7 +129,7 @@ fn main() {
 
         if cfg.progress.enable {
             let progress_chars = match cfg.progress.bar_style {
-                config::CliProgressBarStyle::Dot => "●•·",
+                config::CliProgressBarStyle::Dot => "●●·",
                 config::CliProgressBarStyle::Hash => "##·",
                 config::CliProgressBarStyle::Arrow => "=> ",
             }
