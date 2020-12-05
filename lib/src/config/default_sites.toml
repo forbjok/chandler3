@@ -1,3 +1,31 @@
+### Imageboards ###
+
 [sites."4chan"]
 url-regexes = ['^http(?:s)?://boards.(?:4chan|4channel).org/(.+)/thread/(\d+)']
 parser = "4chan"
+
+[sites."mlpol"]
+url-regexes = ['^http(?:s)?://mlpol.net/(.+)/(\d+)']
+parser = "aspnetchan"
+
+[sites."ponychan"]
+url-regexes = ['^http(?:s)?://www.ponychan.net/(.+)/res/(\d+)']
+parser = "ponychan"
+
+[sites."4chon"]
+url-regexes = ['^http(?:s)?://www.4chon.me/(.+)/res/(\d+)']
+parser = "lainchan"
+
+[sites."7chan"]
+url-regexes = ['^http(?:s)?://7chan.org/(.+)/res/(\d+)']
+parser = "kusabax"
+
+### Archives ###
+
+[sites."archive.4plebs.org"]
+url-regexes = ['^http(?:s)?://archive.4plebs.org/(.+)/thread/(\d+)']
+parser = "foolfuuka"
+
+[sites."desuarchive"]
+url-regexes = ['^http(?:s)?://desuarchive.org/(.+)/thread/(\d+)']
+parser = "foolfuuka"
