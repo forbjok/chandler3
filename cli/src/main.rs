@@ -14,6 +14,7 @@ mod ui;
 use chandler::project;
 use chandler::ui::*;
 
+use crate::error::*;
 use crate::ui::*;
 
 #[derive(Clone, Copy, Debug, EnumString)]
@@ -28,6 +29,7 @@ pub enum ProjectFormat {
 struct Opt {
     #[structopt(short = "v", parse(from_occurrences), help = "Verbosity")]
     verbosity: u8,
+
     #[structopt(subcommand)]
     command: Command,
 }
@@ -40,6 +42,9 @@ pub struct ProjectOptions {
 
 #[derive(StructOpt, Debug)]
 enum Command {
+    #[structopt(name = "generate-config", about = "Generate default configuration files")]
+    GenerateConfig,
+
     #[structopt(name = "grab", about = "Download thread")]
     Grab {
         #[structopt(help = "URL of threads to download")]
@@ -142,6 +147,7 @@ fn main() {
     };
 
     let cmd_result = match opt.command {
+        Command::GenerateConfig => generate_default_configs(),
         Command::Grab { url, project_options } => command::grab(&url, &project_options, ui.as_mut()),
         Command::Rebuild { path } => command::rebuild(&path, ui.as_mut()),
         Command::Watch {
@@ -185,4 +191,11 @@ fn initialize_logging(our_level_filter: LevelFilter) {
         })
         .apply()
         .unwrap();
+}
+
+fn generate_default_configs() -> Result<(), CliError> {
+    config::CliConfig::write_default()?;
+    chandler::config::generate_default_config()?;
+
+    Ok(())
 }

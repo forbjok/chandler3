@@ -1,0 +1,6 @@
+# Include built-in sites.
+include-builtin-sites = true
+
+#[sites."examplechan"]
+#url-regexes = ['^http(?:s)?://examplechan.org/(.+)/res/(\d+)']
+#parser = "tinyboard"

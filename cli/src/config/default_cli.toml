@@ -1,0 +1,4 @@
+# Progress display options.
+[progress]
+enable = true
+bar-style = "dot"

@@ -52,3 +52,11 @@ pub fn open_file(path: impl AsRef<Path>) -> Result<fs::File, FileError> {
         path: util::normalize_path(path),
     })
 }
+
+pub fn create_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    if let Some(parent_dir_path) = path.as_ref().parent() {
+        fs::create_dir_all(parent_dir_path)?;
+    }
+
+    Ok(())
+}

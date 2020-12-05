@@ -1,5 +1,5 @@
-use std::io::Read;
-use std::path::Path;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use serde_derive::{Deserialize, Serialize};
@@ -8,6 +8,8 @@ use chandler::error::*;
 use chandler::util;
 
 pub const CLI_CONFIG_FILENAME: &str = "cli.toml";
+
+pub const DEFAULT_CLI_TOML: &str = include_str!("default_cli.toml");
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -49,23 +51,43 @@ impl CliConfig {
         Self::from_str(&toml_str)
     }
 
+    pub fn default_location() -> Option<PathBuf> {
+        chandler::config::get_config_path().map(|p| p.join(CLI_CONFIG_FILENAME))
+    }
+
     pub fn from_default_location() -> Result<Self, ChandlerError> {
-        let config =
-            if let Some(config_file_path) = chandler::config::get_config_path().map(|p| p.join(CLI_CONFIG_FILENAME)) {
-                if config_file_path.exists() {
-                    Some(Self::from_file(&config_file_path)?)
-                } else {
-                    None
-                }
+        let config = if let Some(config_file_path) = Self::default_location() {
+            if config_file_path.exists() {
+                Some(Self::from_file(&config_file_path)?)
             } else {
                 None
-            };
+            }
+        } else {
+            None
+        };
 
         if let Some(config) = config {
             Ok(config)
         } else {
             Ok(Self::default())
         }
+    }
+
+    pub fn write_default() -> Result<(), ChandlerError> {
+        if let Some(config_file_path) = Self::default_location() {
+            if !config_file_path.exists() {
+                // Create config directory if necessary.
+                util::create_parent_dir(&config_file_path)
+                    .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
+
+                // Write config file.
+                let mut file = util::create_file(config_file_path).map_err(ChandlerError::CreateFile)?;
+                file.write_all(DEFAULT_CLI_TOML.as_bytes())
+                    .map_err(ChandlerError::WriteFile)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

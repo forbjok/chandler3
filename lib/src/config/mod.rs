@@ -7,6 +7,8 @@ mod parser;
 mod regex;
 pub mod sites;
 
+use crate::error::*;
+
 pub use self::parser::*;
 pub use self::regex::*;
 
@@ -20,4 +22,11 @@ pub fn get_config_path() -> Option<PathBuf> {
     }
 
     config_path
+}
+
+pub fn generate_default_config() -> Result<(), ChandlerError> {
+    chandler::ChandlerConfig::write_default()?;
+    sites::SitesConfig::write_default()?;
+
+    Ok(())
 }

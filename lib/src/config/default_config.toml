@@ -1,0 +1,3 @@
+# Specify path to download threads to.
+# Subdirectories will automatically be created for each site, board, thread, etc.
+#download-path = "/PATH/TO/DOWNLOADS"

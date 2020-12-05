@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -10,6 +10,8 @@ use crate::util;
 use super::*;
 
 pub const CONFIG_FILENAME: &str = "config.toml";
+
+pub const DEFAULT_CONFIG_TOML: &str = include_str!("default_config.toml");
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -32,8 +34,12 @@ impl ChandlerConfig {
         Self::from_str(&toml_str)
     }
 
+    pub fn default_location() -> Option<PathBuf> {
+        get_config_path().map(|p| p.join(CONFIG_FILENAME))
+    }
+
     pub fn from_default_location() -> Result<Self, ChandlerError> {
-        let config = if let Some(config_file_path) = get_config_path().map(|p| p.join(CONFIG_FILENAME)) {
+        let config = if let Some(config_file_path) = Self::default_location() {
             if config_file_path.exists() {
                 Some(Self::from_file(&config_file_path)?)
             } else {
@@ -48,6 +54,23 @@ impl ChandlerConfig {
         } else {
             Ok(Self::default())
         }
+    }
+
+    pub fn write_default() -> Result<(), ChandlerError> {
+        if let Some(config_file_path) = Self::default_location() {
+            if !config_file_path.exists() {
+                // Create config directory if necessary.
+                util::create_parent_dir(&config_file_path)
+                    .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
+
+                // Write config file.
+                let mut file = util::create_file(config_file_path).map_err(ChandlerError::CreateFile)?;
+                file.write_all(DEFAULT_CONFIG_TOML.as_bytes())
+                    .map_err(ChandlerError::WriteFile)?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn resolve(self) -> Result<ResolvedChandlerConfig, ChandlerError> {

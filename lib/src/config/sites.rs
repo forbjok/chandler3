@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -11,8 +12,10 @@ use crate::util;
 
 use super::*;
 
-pub const BUILTIN_SITES_TOML: &str = include_str!("builtin_sites.toml");
 pub const SITES_CONFIG_FILENAME: &str = "sites.toml";
+
+pub const BUILTIN_SITES_TOML: &str = include_str!("builtin_sites.toml");
+pub const DEFAULT_SITES_TOML: &str = include_str!("default_sites.toml");
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -46,12 +49,33 @@ impl SitesConfig {
         Self::from_str(&toml_str)
     }
 
+    pub fn default_location() -> Option<PathBuf> {
+        get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME))
+    }
+
     pub fn load_builtin() -> Result<Self, ChandlerError> {
         BUILTIN_SITES_TOML.parse()
     }
 
     pub fn merge_from(&mut self, other: Self) {
         self.sites.extend(other.sites);
+    }
+
+    pub fn write_default() -> Result<(), ChandlerError> {
+        if let Some(config_file_path) = Self::default_location() {
+            if !config_file_path.exists() {
+                // Create config directory if necessary.
+                util::create_parent_dir(&config_file_path)
+                    .map_err(|err| ChandlerError::Other(err.to_string().into()))?;
+
+                // Write config file.
+                let mut file = util::create_file(config_file_path).map_err(ChandlerError::CreateFile)?;
+                file.write_all(DEFAULT_SITES_TOML.as_bytes())
+                    .map_err(ChandlerError::WriteFile)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -94,7 +118,7 @@ impl SiteResolver for SitesConfig {
 }
 
 pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
-    if let Some(config_file_path) = get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME)) {
+    if let Some(config_file_path) = SitesConfig::default_location() {
         if config_file_path.exists() {
             let mut user_config = SitesConfig::from_file(&config_file_path)?;
             if user_config.include_builtin_sites {
