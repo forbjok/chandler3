@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use lazy_static::lazy_static;
+use log::error;
 
 pub mod chandler;
 mod parser;
@@ -12,6 +12,12 @@ pub use self::regex::*;
 
 pub const CONFIG_DIR: &str = "chandler3";
 
-lazy_static! {
-    static ref DEFAULT_CONFIG_DIR_PATH: PathBuf = dirs::config_dir().unwrap().join(CONFIG_DIR);
+pub fn get_config_path() -> Option<PathBuf> {
+    let config_path = dirs::config_dir().map(|p| p.join(CONFIG_DIR));
+
+    if config_path.is_none() {
+        error!("Could not get configuration path!");
+    }
+
+    config_path
 }

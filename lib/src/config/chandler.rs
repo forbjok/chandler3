@@ -2,7 +2,6 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::error::*;
@@ -11,10 +10,6 @@ use crate::util;
 use super::*;
 
 pub const CONFIG_FILENAME: &str = "config.toml";
-
-lazy_static! {
-    static ref DEFAULT_CONFIG_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(CONFIG_FILENAME);
-}
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -38,11 +33,21 @@ impl ChandlerConfig {
     }
 
     pub fn from_default_location() -> Result<Self, ChandlerError> {
-        if !(*DEFAULT_CONFIG_FILE_PATH).exists() {
-            return Ok(Self::default());
-        }
+        let config = if let Some(config_file_path) = get_config_path().map(|p| p.join(CONFIG_FILENAME)) {
+            if config_file_path.exists() {
+                Some(Self::from_file(&config_file_path)?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
-        Self::from_file(&*DEFAULT_CONFIG_FILE_PATH)
+        if let Some(config) = config {
+            Ok(config)
+        } else {
+            Ok(Self::default())
+        }
     }
 
     pub fn resolve(self) -> Result<ResolvedChandlerConfig, ChandlerError> {

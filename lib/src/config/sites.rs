@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use lazy_static::lazy_static;
 use serde_derive::Deserialize;
 
 use crate::error::*;
@@ -13,11 +12,7 @@ use crate::util;
 use super::*;
 
 pub const DEFAULT_SITES_TOML: &str = include_str!("default_sites.toml");
-pub const SITES_FILENAME: &str = "sites.toml";
-
-lazy_static! {
-    static ref DEFAULT_SITES_FILE_PATH: PathBuf = DEFAULT_CONFIG_DIR_PATH.join(SITES_FILENAME);
-}
+pub const SITES_CONFIG_FILENAME: &str = "sites.toml";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -88,8 +83,18 @@ impl SiteResolver for SitesConfig {
 }
 
 pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
-    if DEFAULT_SITES_FILE_PATH.exists() {
-        Ok(SitesConfig::from_file(&*DEFAULT_SITES_FILE_PATH)?)
+    let config = if let Some(config_file_path) = get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME)) {
+        if config_file_path.exists() {
+            Some(SitesConfig::from_file(&config_file_path)?)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    if let Some(config) = config {
+        Ok(config)
     } else {
         Ok(SitesConfig::load_default()?)
     }

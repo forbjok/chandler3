@@ -7,7 +7,6 @@ use serde_derive::{Deserialize, Serialize};
 use chandler::error::*;
 use chandler::util;
 
-pub const CONFIG_DIR: &str = "chandler3";
 pub const CLI_CONFIG_FILENAME: &str = "cli.toml";
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -51,21 +50,22 @@ impl CliConfig {
     }
 
     pub fn from_default_location() -> Result<Self, ChandlerError> {
-        let config_path = if let Some(config_path) = dirs::config_dir() {
-            config_path
+        let config =
+            if let Some(config_file_path) = chandler::config::get_config_path().map(|p| p.join(CLI_CONFIG_FILENAME)) {
+                if config_file_path.exists() {
+                    Some(Self::from_file(&config_file_path)?)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+        if let Some(config) = config {
+            Ok(config)
         } else {
-            ".".into()
-        };
-
-        let config_path = config_path.join(CONFIG_DIR);
-
-        if !config_path.exists() {
-            return Ok(Self::default());
+            Ok(Self::default())
         }
-
-        let config_file_path = config_path.join(CLI_CONFIG_FILENAME);
-
-        Self::from_file(&config_file_path)
     }
 }
 
