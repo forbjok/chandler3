@@ -11,7 +11,7 @@ use crate::util;
 
 use super::*;
 
-pub const DEFAULT_SITES_TOML: &str = include_str!("default_sites.toml");
+pub const BUILTIN_SITES_TOML: &str = include_str!("builtin_sites.toml");
 pub const SITES_CONFIG_FILENAME: &str = "sites.toml";
 
 #[derive(Debug, Deserialize)]
@@ -24,7 +24,14 @@ pub struct SiteDef {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SitesConfig {
-    sites: HashMap<String, SiteDef>,
+    #[serde(default = "default_include_builtin_sites")]
+    pub include_builtin_sites: bool,
+    pub sites: HashMap<String, SiteDef>,
+}
+
+/// Used to specify serde default value for the "include_builtin_sites" field.
+fn default_include_builtin_sites() -> bool {
+    true
 }
 
 impl SitesConfig {
@@ -39,8 +46,12 @@ impl SitesConfig {
         Self::from_str(&toml_str)
     }
 
-    pub fn load_default() -> Result<Self, ChandlerError> {
-        DEFAULT_SITES_TOML.parse()
+    pub fn load_builtin() -> Result<Self, ChandlerError> {
+        BUILTIN_SITES_TOML.parse()
+    }
+
+    pub fn merge_from(&mut self, other: Self) {
+        self.sites.extend(other.sites);
     }
 }
 
@@ -83,19 +94,18 @@ impl SiteResolver for SitesConfig {
 }
 
 pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
-    let config = if let Some(config_file_path) = get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME)) {
+    if let Some(config_file_path) = get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME)) {
         if config_file_path.exists() {
-            Some(SitesConfig::from_file(&config_file_path)?)
+            let mut user_config = SitesConfig::from_file(&config_file_path)?;
+            if user_config.include_builtin_sites {
+                user_config.merge_from(SitesConfig::load_builtin()?)
+            }
+
+            Ok(user_config)
         } else {
-            None
+            Ok(SitesConfig::load_builtin()?)
         }
     } else {
-        None
-    };
-
-    if let Some(config) = config {
-        Ok(config)
-    } else {
-        Ok(SitesConfig::load_default()?)
+        Ok(SitesConfig::load_builtin()?)
     }
 }
