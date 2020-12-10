@@ -11,7 +11,9 @@ mod v3;
 
 use common::LinkInfo;
 
-use crate::config::chandler::ResolvedChandlerConfig;
+use crate::config;
+use crate::config::chandler::ChandlerConfig;
+use crate::config::sites::SitesConfig;
 use crate::error::*;
 use crate::misc::site_resolver::{self, SiteResolver};
 use crate::threadupdater::{ParserType, ThreadUpdater};
@@ -49,6 +51,7 @@ pub struct ProjectState {
     pub seen_links: HashSet<String>,
 }
 
+#[derive(Default)]
 pub struct CreateProjectBuilder {
     /// Thread URL.
     url: Option<String>,
@@ -62,7 +65,24 @@ pub struct CreateProjectBuilder {
     /// Parser type to use for the created project.
     parser: Option<ParserType>,
 
-    config: Option<ResolvedChandlerConfig>,
+    /// Chandler configuration to use.
+    config: Option<ChandlerConfig>,
+
+    /// Config file to try to load if no config was explicitly specified.
+    config_file: Option<PathBuf>,
+
+    /// Sites file to try to load if no site resolver was explicitly specified.
+    sites_file: Option<PathBuf>,
+
+    /// Whether to try to load the user's config.toml file if no config was explicitly passed.
+    use_chandler_config: bool,
+
+    /// Whether to try to load the user's sites.toml file if no site
+    use_sites_config: bool,
+
+    /// Path to load configuration files from.
+    config_path: Option<PathBuf>,
+
     site_resolver: Option<Box<dyn SiteResolver>>,
 }
 
@@ -85,21 +105,6 @@ pub trait ProjectLoader {
     fn create(path: &Path, url: &str, parser: ParserType) -> Result<Self::P, ChandlerError>;
     fn load(path: &Path) -> Result<Self::P, ChandlerError>;
     fn exists_at(path: &Path) -> bool;
-}
-
-impl Default for CreateProjectBuilder {
-    fn default() -> Self {
-        Self {
-            url: None,
-            path: None,
-
-            format: None,
-            parser: None,
-
-            config: None,
-            site_resolver: None,
-        }
-    }
 }
 
 impl ProjectState {
@@ -150,38 +155,57 @@ impl CreateProjectBuilder {
         self
     }
 
-    pub fn path(mut self, path: &Path) -> Self {
-        self.path = Some(path.to_path_buf());
+    pub fn path(mut self, path: Option<&Path>) -> Self {
+        self.path = path.map(|p| p.to_path_buf());
 
         self
     }
 
-    pub fn format(mut self, format: ProjectFormat) -> Self {
-        self.format = Some(format);
+    pub fn format(mut self, format: Option<ProjectFormat>) -> Self {
+        self.format = format;
 
         self
     }
 
-    pub fn parser(mut self, parser: ParserType) -> Self {
-        self.parser = Some(parser);
+    pub fn parser(mut self, parser: Option<ParserType>) -> Self {
+        self.parser = parser;
 
         self
     }
 
-    pub fn site_resolver(mut self, site_resolver: Box<dyn SiteResolver>) -> Self {
-        self.site_resolver = Some(site_resolver);
+    pub fn site_resolver(mut self, site_resolver: Option<Box<dyn SiteResolver>>) -> Self {
+        self.site_resolver = site_resolver;
 
         self
     }
 
-    pub fn use_chandler_config(mut self) -> Result<Self, ChandlerError> {
-        self.config = Some(crate::config::chandler::ChandlerConfig::from_default_location()?.resolve()?);
+    pub fn config_path(mut self, path: Option<&Path>) -> Self {
+        self.config_path = path.map(|p| p.to_path_buf());
+
+        self
+    }
+
+    pub fn config_file(mut self, path: Option<&Path>) -> Self {
+        self.config_file = path.map(|p| p.to_path_buf());
+
+        self
+    }
+
+    pub fn sites_file(mut self, path: Option<&Path>) -> Self {
+        self.sites_file = path.map(|p| p.to_path_buf());
+
+        self
+    }
+
+    pub fn use_chandler_config(mut self, v: bool) -> Result<Self, ChandlerError> {
+        self.use_chandler_config = v;
 
         Ok(self)
     }
 
-    pub fn use_sites_config(mut self) -> Result<Self, ChandlerError> {
-        self.site_resolver = Some(Box::new(crate::config::sites::load_sites_config()?));
+    pub fn use_sites_config(mut self, v: bool) -> Result<Self, ChandlerError> {
+        //self.site_resolver = Some(Box::new(crate::config::sites::load_sites_config()?));
+        self.use_sites_config = v;
 
         Ok(self)
     }
@@ -198,7 +222,47 @@ impl CreateProjectBuilder {
             let format = self.format;
             let mut parser = self.parser;
 
-            if let Some(site_resolver) = self.site_resolver {
+            // Use specified config path, or try to get the default one.
+            let config_path = self.config_path.or_else(|| config::get_default_config_path());
+
+            let config = if let Some(config) = self.config {
+                // If a config was explicitly specified, use it.
+                Some(config)
+            } else if let Some(config_file) = &self.config_file {
+                // ... otherwise, if a specific file was specified, try to load it.
+                Some(ChandlerConfig::from_file(config_file)?)
+            } else if self.use_chandler_config {
+                // ... otherwise, if it was specified to load the user's config ...
+                if let Some(config_path) = &config_path {
+                    // If a config path was available, try to load the config from it.
+                    Some(ChandlerConfig::from_location(config_path)?)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            let config = config.unwrap_or_else(|| ChandlerConfig::default()).resolve()?;
+
+            let site_resolver = if let Some(site_resolver) = self.site_resolver {
+                Some(site_resolver)
+            } else if let Some(sites_file) = &self.sites_file {
+                // ... otherwise, if a specific file was specified, try to load it.
+                Some(Box::new(SitesConfig::from_file(sites_file)?) as Box<dyn SiteResolver>)
+            } else if self.use_sites_config {
+                // ... otherwise, if it was specified to load the user's sites config ...
+                if let Some(config_path) = &config_path {
+                    // If a config path was available, try to load the sites config from it.
+                    Some(Box::new(SitesConfig::from_location(config_path)?) as Box<dyn SiteResolver>)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            if let Some(site_resolver) = site_resolver {
                 let site_info = if let Some(site_info) = site_resolver.resolve_site(&url)? {
                     site_info
                 } else {
@@ -206,16 +270,14 @@ impl CreateProjectBuilder {
                 };
 
                 if path.is_none() {
-                    if let Some(config) = &self.config {
-                        let new_path = config.download_path.join(site_info.name).join(site_info.path);
+                    let new_path = config.download_path.join(site_info.name).join(site_info.path);
 
-                        // If a project already exists at the generated path, load it.
-                        if exists_at(&new_path).is_some() {
-                            return load(&new_path);
-                        }
-
-                        path = Some(new_path);
+                    // If a project already exists at the generated path, load it.
+                    if exists_at(&new_path).is_some() {
+                        return load(&new_path);
                     }
+
+                    path = Some(new_path);
                 }
 
                 if parser.is_none() {

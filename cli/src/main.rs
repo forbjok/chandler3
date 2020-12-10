@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, info, warn, LevelFilter};
 use structopt::StructOpt;
 use strum_macros::EnumString;
 
@@ -14,6 +14,7 @@ mod ui;
 use chandler::project;
 use chandler::ui::*;
 
+use crate::config::CliConfig;
 use crate::error::*;
 use crate::ui::*;
 
@@ -30,8 +31,17 @@ struct Opt {
     #[structopt(short = "v", parse(from_occurrences), help = "Verbosity")]
     verbosity: u8,
 
+    #[structopt(flatten)]
+    general_options: GeneralOptions,
+
     #[structopt(subcommand)]
     command: Command,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct GeneralOptions {
+    #[structopt(long = "config-path", help = "Specify config path to use")]
+    config_path: Option<PathBuf>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -96,13 +106,25 @@ fn main() {
 
     debug!("Debug logging enabled.");
 
-    let cfg = match config::CliConfig::from_default_location() {
-        Ok(v) => v,
-        Err(err) => {
-            eprintln!("{}", err);
+    let cfg = if let Some(config_path) = opt
+        .general_options
+        .config_path
+        .as_ref()
+        .map(|p| p.to_path_buf())
+        .or_else(chandler::config::get_default_config_path)
+    {
+        match CliConfig::from_location(&config_path) {
+            Ok(v) => v,
+            Err(err) => {
+                eprintln!("{}", err);
 
-            config::CliConfig::default()
+                CliConfig::default()
+            }
         }
+    } else {
+        warn!("No config path specified, and no default path could be determined.");
+
+        CliConfig::default()
     };
 
     // Cancellation boolean.
@@ -148,13 +170,15 @@ fn main() {
 
     let cmd_result = match opt.command {
         Command::GenerateConfig => generate_default_configs(),
-        Command::Grab { url, project_options } => command::grab(&url, &project_options, ui.as_mut()),
+        Command::Grab { url, project_options } => {
+            command::grab(&url, &opt.general_options, &project_options, ui.as_mut())
+        }
         Command::Rebuild { path } => command::rebuild(&path, ui.as_mut()),
         Command::Watch {
             url,
             interval,
             project_options,
-        } => command::watch(&url, interval, &project_options, ui.as_mut()),
+        } => command::watch(&url, interval, &opt.general_options, &project_options, ui.as_mut()),
     };
 
     match cmd_result {

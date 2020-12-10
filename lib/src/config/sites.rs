@@ -50,7 +50,30 @@ impl SitesConfig {
     }
 
     pub fn default_location() -> Option<PathBuf> {
-        get_config_path().map(|p| p.join(SITES_CONFIG_FILENAME))
+        get_default_config_path()
+    }
+
+    pub fn from_location(path: &Path) -> Result<Self, ChandlerError> {
+        let config_file_path = path.join(SITES_CONFIG_FILENAME);
+
+        if config_file_path.exists() {
+            let mut user_config = SitesConfig::from_file(&config_file_path)?;
+            if user_config.include_builtin_sites {
+                user_config.merge_from(SitesConfig::load_builtin()?)
+            }
+
+            Ok(user_config)
+        } else {
+            Ok(SitesConfig::load_builtin()?)
+        }
+    }
+
+    pub fn from_default_location() -> Result<Self, ChandlerError> {
+        if let Some(path) = Self::default_location() {
+            Self::from_location(&path)
+        } else {
+            Self::load_builtin()
+        }
     }
 
     pub fn load_builtin() -> Result<Self, ChandlerError> {
@@ -114,22 +137,5 @@ impl SiteResolver for SitesConfig {
         }
 
         Ok(None)
-    }
-}
-
-pub fn load_sites_config() -> Result<SitesConfig, ChandlerError> {
-    if let Some(config_file_path) = SitesConfig::default_location() {
-        if config_file_path.exists() {
-            let mut user_config = SitesConfig::from_file(&config_file_path)?;
-            if user_config.include_builtin_sites {
-                user_config.merge_from(SitesConfig::load_builtin()?)
-            }
-
-            Ok(user_config)
-        } else {
-            Ok(SitesConfig::load_builtin()?)
-        }
-    } else {
-        Ok(SitesConfig::load_builtin()?)
     }
 }

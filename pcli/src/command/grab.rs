@@ -19,10 +19,10 @@ pub fn grab(url: &str, destination: &Path, project_options: &ProjectOptions) -> 
 
     let result = (|| -> Result<ProjectUpdateResult, PcliError> {
         let mut project = project::builder()
-            .path(&project_path)
+            .path(Some(&project_path))
             .url(url)
-            .use_sites_config()?
-            .format(project_options.format.into())
+            .use_sites_config(true)?
+            .format(Some(project_options.format.into()))
             .load_or_create()?;
 
         let mut ui_handler = StderrUiHandler::new();

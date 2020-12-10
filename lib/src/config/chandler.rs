@@ -35,22 +35,22 @@ impl ChandlerConfig {
     }
 
     pub fn default_location() -> Option<PathBuf> {
-        get_config_path().map(|p| p.join(CONFIG_FILENAME))
+        get_default_config_path()
+    }
+
+    pub fn from_location(path: &Path) -> Result<Self, ChandlerError> {
+        let config_file_path = path.join(CONFIG_FILENAME);
+
+        if config_file_path.exists() {
+            Ok(Self::from_file(&config_file_path)?)
+        } else {
+            Ok(Self::default())
+        }
     }
 
     pub fn from_default_location() -> Result<Self, ChandlerError> {
-        let config = if let Some(config_file_path) = Self::default_location() {
-            if config_file_path.exists() {
-                Some(Self::from_file(&config_file_path)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some(config) = config {
-            Ok(config)
+        if let Some(path) = Self::default_location() {
+            Self::from_location(&path)
         } else {
             Ok(Self::default())
         }

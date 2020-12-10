@@ -14,7 +14,7 @@ pub use self::regex::*;
 
 pub const CONFIG_DIR: &str = "chandler3";
 
-pub fn get_config_path() -> Option<PathBuf> {
+pub fn get_default_config_path() -> Option<PathBuf> {
     let config_path = dirs_next::config_dir().map(|p| p.join(CONFIG_DIR));
 
     if config_path.is_none() {

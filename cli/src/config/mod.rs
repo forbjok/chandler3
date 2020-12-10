@@ -52,22 +52,14 @@ impl CliConfig {
     }
 
     pub fn default_location() -> Option<PathBuf> {
-        chandler::config::get_config_path().map(|p| p.join(CLI_CONFIG_FILENAME))
+        chandler::config::get_default_config_path()
     }
 
-    pub fn from_default_location() -> Result<Self, ChandlerError> {
-        let config = if let Some(config_file_path) = Self::default_location() {
-            if config_file_path.exists() {
-                Some(Self::from_file(&config_file_path)?)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+    pub fn from_location(path: &Path) -> Result<Self, ChandlerError> {
+        let config_file_path = path.join(CLI_CONFIG_FILENAME);
 
-        if let Some(config) = config {
-            Ok(config)
+        if config_file_path.exists() {
+            Ok(Self::from_file(&config_file_path)?)
         } else {
             Ok(Self::default())
         }
