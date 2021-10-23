@@ -66,5 +66,5 @@ fn process_exists(pid: Pid) -> bool {
 
     let sys = System::new_with_specifics(RefreshKind::new().with_processes());
 
-    sys.get_process(pid).is_some()
+    sys.process(pid).is_some()
 }

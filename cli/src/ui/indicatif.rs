@@ -63,7 +63,7 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 let bar = ProgressBar::new(0)
                     .with_style(ProgressStyle::default_spinner().template(" {prefix:>8} {bytes}/? {wide_msg}"))
                     .with_prefix("Download")
-                    .with_message(&url);
+                    .with_message(url.to_owned());
 
                 // Draw initial bar.
                 bar.tick();

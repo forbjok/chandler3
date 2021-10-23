@@ -74,7 +74,7 @@ fn waiting_bar(wait_seconds: u64, message: &str, ui: &mut dyn ChandlerUiHandler)
     let waiting_bar = ProgressBar::new(wait_seconds)
         .with_style(ProgressStyle::default_bar().template(" {prefix} {pos} {wide_msg}"))
         .with_prefix("Waiting")
-        .with_message(message)
+        .with_message(message.to_owned())
         .with_position(wait_seconds);
 
     // Draw initial bar.

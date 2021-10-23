@@ -76,7 +76,7 @@ impl ChandlerConfig {
     pub fn resolve(self) -> Result<ResolvedChandlerConfig, ChandlerError> {
         let download_path = if let Some(download_path) = self.download_path {
             util::normalize_path(download_path)
-        } else if let Some(os_download_path) = dirs_next::download_dir() {
+        } else if let Some(os_download_path) = dirs::download_dir() {
             os_download_path.join("chandler3")
         } else {
             return Err(ChandlerError::Config(

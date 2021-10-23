@@ -13,17 +13,17 @@ path = "src/main.rs"
 [dependencies]
 chandler = { path = "../lib" }
 chrono = { version = "0.4.19", features = ["serde"] }
-ctrlc = "3.1.7"
+ctrlc = "3.2.1"
 fern = "0.6.0"
-indicatif = { git = "https://github.com/forbjok/indicatif.git", branch = "more-builder-style-functions" }
+indicatif = "0.16.2"
 lazy_static = "1.4.0"
-log = "0.4.11"
-regex = "1.4.2"
-reqwest = { version = "0.10.9", features = ["blocking"] }
-serde = "1.0.117"
-serde_derive = "1.0.117"
-serde_json = "1.0.59"
-structopt = "0.3.20"
-strum = "0.20.0"
-strum_macros = "0.20.1"
-toml = "0.5.7"
+log = "0.4.14"
+regex = "1.5.4"
+reqwest = { version = "0.11.6", features = ["blocking"] }
+serde = "1.0.130"
+serde_derive = "1.0.130"
+serde_json = "1.0.68"
+structopt = "0.3.25"
+strum = "0.22.0"
+strum_macros = "0.22.0"
+toml = "0.5.8"
