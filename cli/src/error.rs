@@ -4,7 +4,7 @@ use chandler::{ChandlerError, DownloadError};
 
 #[derive(Debug)]
 pub enum CliErrorKind {
-    Arguments,
+    //Arguments,
     Config,
     Other,
 }
@@ -12,7 +12,7 @@ pub enum CliErrorKind {
 impl CliErrorKind {
     pub fn exit_code(&self) -> i32 {
         match self {
-            Self::Arguments => 1,
+            //Self::Arguments => 1,
             Self::Config => 2,
             Self::Other => 101,
         }

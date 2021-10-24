@@ -8,7 +8,7 @@ use chandler::{ChandlerError, DownloadError};
 
 #[derive(Debug)]
 pub enum CommandErrorKind {
-    Arguments,
+    //Arguments,
     Config,
     Other,
     Network,
@@ -17,7 +17,7 @@ pub enum CommandErrorKind {
 impl CommandErrorKind {
     pub fn exit_code(&self) -> i32 {
         match self {
-            Self::Arguments => 1,
+            //Self::Arguments => 1,
             Self::Config => 2,
             Self::Other => 101,
             Self::Network => 102,

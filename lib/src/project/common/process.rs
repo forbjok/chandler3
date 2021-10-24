@@ -69,7 +69,7 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
                             link.replace(&path);
 
                             return Ok(Some(LinkInfo {
-                                url: absolute_url.into_string(),
+                                url: absolute_url.into(),
                                 path,
                             }));
                         } else {
