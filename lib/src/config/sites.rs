@@ -53,8 +53,12 @@ impl SitesConfig {
         get_default_config_path()
     }
 
+    fn path_from_location(path: &Path) -> Result<PathBuf, ChandlerError> {
+        Ok(path.join(SITES_CONFIG_FILENAME))
+    }
+
     pub fn from_location(path: &Path) -> Result<Self, ChandlerError> {
-        let config_file_path = path.join(SITES_CONFIG_FILENAME);
+        let config_file_path = Self::path_from_location(path)?;
 
         if config_file_path.exists() {
             let mut user_config = SitesConfig::from_file(&config_file_path)?;
@@ -85,7 +89,9 @@ impl SitesConfig {
     }
 
     pub fn write_default() -> Result<(), ChandlerError> {
-        if let Some(config_file_path) = Self::default_location() {
+        if let Some(config_location) = Self::default_location() {
+            let config_file_path = Self::path_from_location(&config_location)?;
+
             if !config_file_path.exists() {
                 // Create config directory if necessary.
                 util::create_parent_dir(&config_file_path)
