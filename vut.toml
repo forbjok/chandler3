@@ -5,5 +5,25 @@ ignore = "**/.git"
 type = "cargo"
 path = "lib"
 
+[file-updaters.nuspec]
+type = "regex"
+replacers = [
+  { regexes = "(<version>)(.*)(</version>)" },
+]
+
+[file-updaters.'version.json']
+type = "regex"
+replacers = [
+  { regexes = '("FullVersion": ")(.*)(")' },
+]
+
 [[update-version-sources]]
 globs = "**"
+
+[[update-files]]
+globs = "**/*.nuspec"
+updater = "nuspec"
+
+[[update-files]]
+globs = "version.json"
+updater = "version.json"
