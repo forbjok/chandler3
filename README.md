@@ -1,4 +1,8 @@
-# Chandler 3
+Chandler 3
+==========
+
+[![CI](https://github.com/forbjok/chandler3/actions/workflows/ci.yml/badge.svg)](https://github.com/forbjok/chandler3/actions/workflows/ci.yml)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/forbjok/chandler3)
 
 ## Introduction
 See a thread you consider worthy of archival?
