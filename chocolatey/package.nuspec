@@ -29,6 +29,5 @@ For sites where this is supported (currently 4chan and Tinyboard-compatible site
   </metadata>
   <files>
     <file src="tools\*" target="tools" />
-    <file src="..\target\i686-pc-windows-msvc\release\chandler.exe" target="tools" />
   </files>
 </package>
