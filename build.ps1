@@ -14,7 +14,14 @@ Write-Host "TargetDir: $TargetDir"
 function Compress-Target([string] $ArchiveName, [string] $Target) {
   Push-Location (Join-Path $TargetDir "$Target\release")
   try {
-    7z a -tzip -mx9 "$DistDir\$ArchiveName.zip" "chandler.exe"
+    $ArchivePath = "$DistDir\$ArchiveName.zip"
+
+    # Compress archive
+    7z a -mx9 $ArchivePath "chandler.exe"
+
+    # Generate checksum for archive
+    $checksum = (Get-FileHash -Path $ArchivePath -Algorithm SHA256).Hash.ToString()
+    Set-Content -Path "$ArchivePath.sha256.txt" -Encoding utf8NoBOM -Value $checksum -NoNewline
   } finally {
     Pop-Location
   }
@@ -41,5 +48,11 @@ $Version = (Get-Content "version.json" | ConvertFrom-Json).FullVersion
 Compress-Target "chandler-$Version-windows-i686" "i686-pc-windows-msvc"
 Compress-Target "chandler-$Version-windows-x86_64" "x86_64-pc-windows-msvc"
 
+# Write version file
+Set-Content -Path "$DistDir\VERSION.txt" -Encoding utf8NoBOM -Value $Version -NoNewline
+
 # Build Chocolatey package
-choco pack "chocolatey\package.nuspec" --outputdirectory "$DistDir"
+choco pack "chocolatey\package.nuspec" --outputdirectory "$DistDir" --version=$Version
+
+# Remove version file after building Chocolatey package
+Remove-Item -Path "$DistDir\VERSION.txt"

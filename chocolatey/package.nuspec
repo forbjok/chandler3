@@ -5,7 +5,7 @@
     <!-- Read this before publishing packages to chocolatey.org: https://github.com/chocolatey/chocolatey/wiki/CreatePackages -->
     <id>chandler</id>
     <title>Chandler</title>
-    <version>3.0.0</version>
+    <version>$version$</version>
     <authors>Kjartan F. Kvamme</authors>
     <owners>Kjartan F. Kvamme</owners>
     <summary>A thread downloader for imageboards such as 4chan.</summary>
@@ -29,5 +29,8 @@ For sites where this is supported (currently 4chan and Tinyboard-compatible site
   </metadata>
   <files>
     <file src="tools\*" target="tools" />
+    <file src="..\dist\VERSION.txt" target="tools" />
+    <file src="..\dist\chandler-$version$-windows-i686.zip.sha256.txt" target="tools" />
+    <file src="..\dist\chandler-$version$-windows-x86_64.zip.sha256.txt" target="tools" />
   </files>
 </package>

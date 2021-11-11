@@ -11,29 +11,9 @@ replacers = [
   { regexes = '("FullVersion": ")(.*)(")' },
 ]
 
-[file-updaters.nuspec]
-type = "regex"
-replacers = [
-  { regexes = "(<version>)(.*)(</version>)" },
-]
-
-[file-updaters."ChocolateyInstall.ps1"]
-type = "regex"
-replacers = [
-  { regexes = "(\\$version = ')(.*)(')" },
-]
-
 [[update-version-sources]]
 globs = "**"
 
 [[update-files]]
 globs = "version.json"
 updater = "version.json"
-
-[[update-files]]
-globs = "**/*.nuspec"
-updater = "nuspec"
-
-[[update-files]]
-globs = "chocolatey/tools/ChocolateyInstall.ps1"
-updater = "ChocolateyInstall.ps1"
