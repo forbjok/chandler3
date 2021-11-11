@@ -1,6 +1,6 @@
 [package]
 name = "chandler-cli"
-version = "3.0.0"
+version = "3.0.1"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
 edition = "2021"
 
