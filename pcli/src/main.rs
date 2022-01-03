@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use clap::Parser;
 use log::{debug, LevelFilter};
-use structopt::StructOpt;
 use strum_macros::EnumString;
 
 mod command;
@@ -17,30 +17,30 @@ pub enum ProjectFormat {
     V3,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "Chandler Programmatic CLI", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
+#[derive(Debug, Parser)]
+#[clap(name = "Chandler Programmatic CLI", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
 struct Opt {
-    #[structopt(short = "v", parse(from_occurrences), help = "Verbosity")]
+    #[clap(short = 'v', parse(from_occurrences), help = "Verbosity")]
     verbosity: u8,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     command: Command,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, Parser)]
 pub struct ProjectOptions {
-    #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
+    #[clap(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
     format: ProjectFormat,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, Parser)]
 enum Command {
-    #[structopt(name = "grab", about = "Download thread")]
+    #[clap(name = "grab", about = "Download thread")]
     Grab {
-        #[structopt(help = "URL of thread to download")]
+        #[clap(help = "URL of thread to download")]
         url: String,
-        #[structopt(help = "Destination path to download to")]
+        #[clap(help = "Destination path to download to")]
         destination: PathBuf,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         project_options: ProjectOptions,
     },
 }
@@ -55,7 +55,7 @@ impl From<ProjectFormat> for project::ProjectFormat {
 }
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'

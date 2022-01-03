@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use clap::Parser;
 use log::{debug, error, info, warn, LevelFilter};
-use structopt::StructOpt;
 use strum_macros::EnumString;
 
 mod command;
@@ -25,55 +25,55 @@ pub enum ProjectFormat {
     V3,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "Chandler", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
+#[derive(Debug, Parser)]
+#[clap(name = "Chandler", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
 struct Opt {
-    #[structopt(short = "v", parse(from_occurrences), help = "Verbosity")]
+    #[clap(short = 'v', parse(from_occurrences), help = "Verbosity")]
     verbosity: u8,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     general_options: GeneralOptions,
 
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     command: Command,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, Parser)]
 pub struct GeneralOptions {
-    #[structopt(long = "config-path", help = "Specify config path to use")]
+    #[clap(long = "config-path", help = "Specify config path to use")]
     config_path: Option<PathBuf>,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, Parser)]
 pub struct ProjectOptions {
-    #[structopt(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
+    #[clap(long = "format", default_value = "v3", help = "Project format to create (v2|v3)")]
     format: ProjectFormat,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Debug, Parser)]
 enum Command {
-    #[structopt(name = "generate-config", about = "Generate default configuration files")]
+    #[clap(name = "generate-config", about = "Generate default configuration files")]
     GenerateConfig,
 
-    #[structopt(name = "grab", about = "Download thread")]
+    #[clap(name = "grab", about = "Download thread")]
     Grab {
-        #[structopt(help = "URL of threads to download")]
+        #[clap(help = "URL of threads to download")]
         url: String,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         project_options: ProjectOptions,
     },
-    #[structopt(name = "rebuild", about = "Rebuild thread from original HTML files")]
+    #[clap(name = "rebuild", about = "Rebuild thread from original HTML files")]
     Rebuild {
-        #[structopt(help = "Path to project to rebuild")]
+        #[clap(help = "Path to project to rebuild")]
         path: PathBuf,
     },
-    #[structopt(name = "watch", about = "Watch thread")]
+    #[clap(name = "watch", about = "Watch thread")]
     Watch {
-        #[structopt(help = "URL of thread to watch")]
+        #[clap(help = "URL of thread to watch")]
         url: String,
-        #[structopt(short = "i", long = "interval", help = "Interval (seconds)", default_value = "600")]
+        #[clap(short = 'i', long = "interval", help = "Interval (seconds)", default_value = "600")]
         interval: i64,
-        #[structopt(flatten)]
+        #[clap(flatten)]
         project_options: ProjectOptions,
     },
 }
@@ -88,7 +88,7 @@ impl From<ProjectFormat> for project::ProjectFormat {
 }
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
