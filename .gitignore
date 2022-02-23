@@ -1,3 +1,4 @@
-/target
 /dist
+/staging
+/target
 Cargo.lock
