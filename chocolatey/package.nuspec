@@ -24,7 +24,7 @@ For sites where this is supported (currently 4chan and Tinyboard-compatible site
     <docsUrl>https://github.com/forbjok/chandler3</docsUrl>
     <bugTrackerUrl>https://github.com/forbjok/chandler3/issues</bugTrackerUrl>
     <tags>vut version versioning regex template semver semantic</tags>
-    <licenseUrl>https://github.com/forbjok/chandler3/blob/master/LICENSE.md</licenseUrl>
+    <licenseUrl>https://github.com/forbjok/chandler3/blob/master/LICENSE-MIT</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
   </metadata>
   <files>
