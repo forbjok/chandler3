@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use log::{debug, error};
-use sysinfo::Pid;
+use sysinfo::{Pid, ProcessRefreshKind};
 
 use crate::util;
 
@@ -64,7 +64,7 @@ impl Drop for PidLock {
 fn process_exists(pid: Pid) -> bool {
     use sysinfo::{RefreshKind, System, SystemExt};
 
-    let sys = System::new_with_specifics(RefreshKind::new().with_processes());
+    let sys = System::new_with_specifics(RefreshKind::new().with_processes(ProcessRefreshKind::new()));
 
     sys.process(pid).is_some()
 }
