@@ -182,7 +182,7 @@ fn main() {
 
 fn initialize_logging() {
     let subscriber = FmtSubscriber::builder()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")))
         .with_writer(std::io::stderr)
         .finish();
 
