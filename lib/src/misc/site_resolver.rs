@@ -1,15 +1,14 @@
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::error::*;
 use crate::threadupdater::ParserType;
 
-lazy_static! {
-    static ref REGEX_SPLIT_URL: Regex = Regex::new(r#"^http(?:s)?://([\w\.:]+)/(?:(.+)/)*([^\.]+).*"#).unwrap();
-}
+static REGEX_SPLIT_URL: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"^http(?:s)?://([\w\.:]+)/(?:(.+)/)*([^\.]+).*"#).unwrap());
 
 pub struct SiteInfo {
     pub name: String,
@@ -44,9 +43,7 @@ pub fn unknown_site(url: &str) -> Result<SiteInfo, ChandlerError> {
 
 /// Sanitize path to ensure it does not contain invalid filesystem characters.
 pub fn sanitize_path(s: &str) -> Cow<str> {
-    lazy_static! {
-        static ref SANITIZE_PATH_REGEX: Regex = Regex::new(r#":|\*|\|"#).unwrap();
-    }
+    static SANITIZE_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#":|\*|\|"#).unwrap());
 
     SANITIZE_PATH_REGEX.replace_all(s, "_")
 }

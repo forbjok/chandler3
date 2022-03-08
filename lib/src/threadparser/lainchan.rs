@@ -4,7 +4,7 @@ use std::iter;
 
 use html5ever::{local_name, namespace_url, ns, QualName};
 use kuchiki::*;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::error::ChandlerError;
@@ -13,9 +13,7 @@ use crate::util;
 
 use super::*;
 
-lazy_static! {
-    static ref REGEX_GET_REPLY_ID: Regex = Regex::new(r#"^pc(\d+)"#).unwrap();
-}
+static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^pc(\d+)"#).unwrap());
 
 pub struct LainchanThread {
     pub root: NodeRef,

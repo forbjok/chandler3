@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use log::{error, info};
+use once_cell::sync::Lazy;
 
 use crate::error::*;
 use crate::project::ProjectState;
@@ -12,19 +12,17 @@ use crate::util;
 
 const BUF_SIZE: usize = 65535;
 
-lazy_static! {
-    static ref USER_AGENT: String = {
-        let os = os_info::get();
+static USER_AGENT: Lazy<String> = Lazy::new(|| {
+    let os = os_info::get();
 
-        format!(
-            "Mozilla/5.0 ({} {}; {}) Chandler/{}",
-            os.os_type(),
-            os.version(),
-            os.bitness(),
-            env!("CARGO_PKG_VERSION")
-        )
-    };
-}
+    format!(
+        "Mozilla/5.0 ({} {}; {}) Chandler/{}",
+        os.os_type(),
+        os.version(),
+        os.bitness(),
+        env!("CARGO_PKG_VERSION")
+    )
+});
 
 #[derive(Debug)]
 pub enum DownloadResult {

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use html5ever::local_name;
 use kuchiki::*;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::error::ChandlerError;
@@ -12,9 +12,7 @@ use crate::util;
 
 use super::*;
 
-lazy_static! {
-    static ref REGEX_GET_REPLY_ID: Regex = Regex::new(r#"^replyC_(\d+)"#).unwrap();
-}
+static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^replyC_(\d+)"#).unwrap());
 
 pub struct PonychanThread {
     pub root: NodeRef,

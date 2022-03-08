@@ -2,11 +2,9 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref HTML_EXTENSION: &'static OsStr = OsStr::new("html");
-}
+static HTML_EXTENSION: Lazy<&'static OsStr> = Lazy::new(|| OsStr::new("html"));
 
 pub fn get_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = Vec::new();
