@@ -47,9 +47,9 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
         let link_info = (|| {
             if let Some(href) = link.file_link() {
                 // Make URL absolute.
-                let absolute_url = thread_url.join(&href).map_err(|err| {
-                    ChandlerError::Other(format!("Error making URL '{}' absolute: {}", &href, err.to_string()).into())
-                })?;
+                let absolute_url = thread_url
+                    .join(&href)
+                    .map_err(|err| ChandlerError::Other(format!("Error making URL '{href}' absolute: {err}").into()))?;
 
                 // Make file URL with query and fragment removed.
                 let file_url = {

@@ -34,7 +34,7 @@ impl Config {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ChandlerError> {
         let file = util::open_file(path).map_err(ChandlerError::OpenConfig)?;
 
-        Ok(serde_json::from_reader(file).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))?)
+        serde_json::from_reader(file).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), ChandlerError> {
@@ -51,7 +51,7 @@ impl State {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ChandlerError> {
         let file = util::open_file(path).map_err(ChandlerError::OpenConfig)?;
 
-        Ok(serde_json::from_reader(file).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))?)
+        serde_json::from_reader(file).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), ChandlerError> {

@@ -28,9 +28,9 @@ impl Regexes {
             let mut builder = regex::RegexBuilder::new(pattern);
             builder.multi_line(true);
 
-            builder.build().map_err(|err| {
-                ChandlerError::Other(Cow::Owned(format!("Invalid regex '{}': {}", pattern, err.to_string())))
-            })
+            builder
+                .build()
+                .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Invalid regex '{pattern}': {err}"))))
         }
 
         let regex_strings = self.to_vec();

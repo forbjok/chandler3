@@ -59,7 +59,7 @@ pub fn find_elements_with_classes<'a>(
 
     find_elements(node, move |data: &ElementData| {
         if data.name.local == find_name {
-            has_classes(&data, class_names)
+            has_classes(data, class_names)
         } else {
             false
         }

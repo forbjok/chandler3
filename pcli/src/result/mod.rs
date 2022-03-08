@@ -25,48 +25,48 @@ impl From<ChandlerError> for PcliError {
         match error {
             ChandlerError::CreateProject(err) => PcliError {
                 code: 10001,
-                description: format!("Error creating project: {}", err.to_string()),
+                description: format!("Error creating project: {err}"),
             },
             ChandlerError::LoadProject(err) => PcliError {
                 code: 10002,
-                description: format!("Error loading project: {}", err.to_string()),
+                description: format!("Error loading project: {err}"),
             },
             ChandlerError::OpenConfig(err) => PcliError {
                 code: 10003,
-                description: format!("Error opening config file: {}", err.to_string()),
+                description: format!("Error opening config file: {err}"),
             },
             ChandlerError::ReadConfig(err) => PcliError {
                 code: 10004,
-                description: format!("Error reading config file: {}", err),
+                description: format!("Error reading config file: {err}"),
             },
             ChandlerError::ParseConfig(err) => PcliError {
                 code: 10005,
-                description: format!("Error parsing configuration: {}", err),
+                description: format!("Error parsing configuration: {err}"),
             },
             ChandlerError::Config(err) => PcliError {
                 code: 10006,
-                description: format!("Configuration error: {}", err),
+                description: format!("Configuration error: {err}"),
             },
             ChandlerError::OpenFile(err) => PcliError {
                 code: 10007,
-                description: format!("Error opening file: {}", err.to_string()),
+                description: format!("Error opening file: {err}"),
             },
             ChandlerError::CreateFile(err) => PcliError {
                 code: 10008,
-                description: format!("Error creating file: {}", err.to_string()),
+                description: format!("Error creating file: {err}"),
             },
             ChandlerError::ReadFile(err) => PcliError {
                 code: 10009,
-                description: format!("Error reading file: {}", err),
+                description: format!("Error reading file: {err}"),
             },
             ChandlerError::WriteFile(err) => PcliError {
                 code: 10010,
-                description: format!("Error writing file: {}", err),
+                description: format!("Error writing file: {err}"),
             },
             ChandlerError::Download(err) => match err {
                 DownloadError::Http { code, description } => PcliError {
                     code: 10012,
-                    description: format!("Download HTTP error: {} {}", code, description),
+                    description: format!("Download HTTP error: {code} {description}"),
                 },
                 DownloadError::Network(err) => PcliError {
                     code: 10012,

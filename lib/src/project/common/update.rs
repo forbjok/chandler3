@@ -37,7 +37,7 @@ pub fn update_thread(
         });
 
         // Download new thread HTML.
-        let result = download_file(&url, &new_thread_file_path, state.last_modified, ui_handler)?;
+        let result = download_file(url, &new_thread_file_path, state.last_modified, ui_handler)?;
 
         match result {
             DownloadResult::Success { last_modified } => {

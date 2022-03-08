@@ -55,7 +55,7 @@ impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
 
         // Process links for all new replies.
         for reply in new_replies.iter() {
-            thread.for_reply_links(&reply, |link| {
+            thread.for_reply_links(reply, |link| {
                 new_links.push(link);
 
                 Ok(())

@@ -51,7 +51,7 @@ pub fn download_file(
             .user_agent(&*USER_AGENT)
             .gzip(true)
             .build()
-            .map_err(|err| ChandlerError::Other(format!("Error building HTTP client: {}", err.to_string()).into()))?;
+            .map_err(|err| ChandlerError::Other(format!("Error building HTTP client: {err}").into()))?;
 
         // Download the thread HTML.
         let mut request = client.get(url);
@@ -181,9 +181,7 @@ pub fn download_linked_content(
 
         if let Some(parent_path) = path.parent() {
             fs::create_dir_all(parent_path).map_err(|err| {
-                ChandlerError::Other(
-                    format!("Error creating path: {}: {}", parent_path.display(), err.to_string()).into(),
-                )
+                ChandlerError::Other(format!("Error creating path: {}: {err}", parent_path.display()).into())
             })?;
         }
 

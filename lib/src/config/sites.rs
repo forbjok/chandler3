@@ -127,10 +127,8 @@ impl SiteResolver for SitesConfig {
                 if let Some(caps) = regex.captures(url) {
                     let mut path = PathBuf::new();
 
-                    for c in caps.iter().skip(1) {
-                        if let Some(m) = c {
-                            path.push(m.as_str());
-                        }
+                    for m in caps.iter().skip(1).flatten() {
+                        path.push(m.as_str());
                     }
 
                     return Ok(Some(SiteInfo {

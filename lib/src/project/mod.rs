@@ -223,7 +223,7 @@ impl CreateProjectBuilder {
             let mut parser = self.parser;
 
             // Use specified config path, or try to get the default one.
-            let config_path = self.config_path.or_else(|| config::get_default_config_path());
+            let config_path = self.config_path.or_else(config::get_default_config_path);
 
             let config = if let Some(config) = self.config {
                 // If a config was explicitly specified, use it.
@@ -243,7 +243,7 @@ impl CreateProjectBuilder {
                 None
             };
 
-            let config = config.unwrap_or_else(|| ChandlerConfig::default()).resolve()?;
+            let config = config.unwrap_or_default().resolve()?;
 
             let site_resolver = if let Some(site_resolver) = self.site_resolver {
                 Some(site_resolver)
@@ -290,9 +290,8 @@ impl CreateProjectBuilder {
             let parser = parser.ok_or_else(|| ChandlerError::CreateProject("No parser type was specified!".into()))?;
 
             let url = {
-                let mut url = Url::parse(&url).map_err(|err| {
-                    ChandlerError::Other(format!("Error parsing thread URL: {}", err.to_string()).into())
-                })?;
+                let mut url = Url::parse(&url)
+                    .map_err(|err| ChandlerError::Other(format!("Error parsing thread URL: {err}").into()))?;
                 url.set_fragment(None);
                 url.to_string()
             };
