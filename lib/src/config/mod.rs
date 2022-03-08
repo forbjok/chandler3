@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use log::error;
-
 pub mod chandler;
 mod parser;
 mod regex;
 pub mod sites;
+
+use tracing::error;
 
 use crate::error::*;
 

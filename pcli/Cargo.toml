@@ -12,9 +12,10 @@ chandler = { path = "../lib" }
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = { version = "3.1.6", features = ["derive"] }
 fern = "0.6.0"
-log = "0.4.14"
 serde = "1.0.136"
 serde_derive = "1.0.136"
 serde_json = "1.0.79"
 strum = "0.24.0"
 strum_macros = "0.24.0"
+tracing = "0.1.31"
+tracing-subscriber = { version = "0.3.9", features = ["env-filter"] }

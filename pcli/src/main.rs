@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use log::{debug, LevelFilter};
 use strum_macros::EnumString;
 
 mod command;
@@ -9,6 +8,8 @@ mod result;
 mod ui;
 
 use chandler::project;
+use tracing::debug;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[derive(Clone, Copy, Debug, EnumString)]
 #[strum(serialize_all = "lowercase")]
@@ -20,8 +21,6 @@ pub enum ProjectFormat {
 #[derive(Debug, Parser)]
 #[clap(name = "Chandler Programmatic CLI", version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
 struct Opt {
-    #[clap(short = 'v', parse(from_occurrences), help = "Verbosity")]
-    verbosity: u8,
     #[clap(subcommand)]
     command: Command,
 }
@@ -57,19 +56,8 @@ impl From<ProjectFormat> for project::ProjectFormat {
 fn main() {
     let opt = Opt::parse();
 
-    // Vary the output based on how many times the user used the "verbose" flag
-    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-    let log_level = match opt.verbosity {
-        0 => LevelFilter::Off,
-        1 => LevelFilter::Error,
-        2 => LevelFilter::Warn,
-        3 => LevelFilter::Info,
-        4 => LevelFilter::Debug,
-        _ => LevelFilter::Trace,
-    };
-
     // Initialize logging
-    initialize_logging(log_level);
+    initialize_logging();
 
     debug!("Debug logging enabled.");
 
@@ -93,26 +81,10 @@ fn main() {
     };
 }
 
-fn initialize_logging(our_level_filter: LevelFilter) {
-    use chrono::Utc;
+fn initialize_logging() {
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .finish();
 
-    const BIN_MODULE: &str = env!("CARGO_CRATE_NAME");
-    const LIB_MODULE: &str = "chandler";
-
-    fern::Dispatch::new()
-        .level(LevelFilter::Error)
-        .level_for(BIN_MODULE, our_level_filter)
-        .level_for(LIB_MODULE, our_level_filter)
-        .chain(std::io::stderr())
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "{} | {} | {} | {}",
-                Utc::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .apply()
-        .unwrap();
+    tracing::subscriber::set_global_default(subscriber).expect("Setting default tracing subscriber failed!");
 }

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use log::debug;
+use tracing::debug;
 use url::Url;
 
 mod format;

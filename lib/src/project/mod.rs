@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
-use log::info;
+use tracing::info;
 use url::Url;
 
 pub mod common;

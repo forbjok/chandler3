@@ -2,8 +2,8 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use log::{debug, error};
 use sysinfo::{Pid, ProcessRefreshKind};
+use tracing::{debug, error};
 
 use crate::util;
 

@@ -1,10 +1,9 @@
 use std::io;
 use std::path::Path;
 
-use log::info;
-
 use chandler::project::{self, ProjectUpdateResult};
 use chandler::util;
+use tracing::info;
 
 use crate::result::*;
 use crate::ui::*;

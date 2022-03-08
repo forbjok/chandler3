@@ -2,8 +2,9 @@ use std::fs;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
-use log::{error, info};
 use once_cell::sync::Lazy;
+use tracing::error;
+use tracing::info;
 
 use crate::error::*;
 use crate::project::ProjectState;

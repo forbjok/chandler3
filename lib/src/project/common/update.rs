@@ -1,5 +1,5 @@
 use chrono::Utc;
-use log::info;
+use tracing::info;
 
 use crate::error::*;
 use crate::project::ProjectState;
