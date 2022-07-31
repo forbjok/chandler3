@@ -62,4 +62,5 @@ pub enum UiEvent {
 pub trait ChandlerUiHandler {
     fn event(&mut self, e: &UiEvent);
     fn is_cancelled(&self) -> bool;
+    fn clear(&mut self) {}
 }

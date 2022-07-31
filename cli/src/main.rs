@@ -168,6 +168,8 @@ fn main() {
         } => command::watch(&url, interval, &opt.general_options, &project_options, ui.as_mut()),
     };
 
+    ui.clear();
+
     match cmd_result {
         Ok(_) => {}
         Err(err) => {

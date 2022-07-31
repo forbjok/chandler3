@@ -1,25 +1,29 @@
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use chandler::ui::*;
 
 pub struct IndicatifUiHandler {
+    multi_progress: MultiProgress,
+
     progress_chars: String,
     cancel_check: Box<dyn Fn() -> bool>,
 
-    overall_download_bar: Option<ProgressBar>,
-    file_download_bar: Option<ProgressBar>,
-    rebuild_bar: Option<ProgressBar>,
+    overall_download_pb: Option<ProgressBar>,
+    file_download_pb: Option<ProgressBar>,
+    rebuild_pb: Option<ProgressBar>,
 }
 
 impl IndicatifUiHandler {
     pub fn new(progress_chars: String, cancel_check: Box<dyn Fn() -> bool>) -> Self {
         Self {
+            multi_progress: MultiProgress::new(),
+
             progress_chars,
             cancel_check,
 
-            overall_download_bar: None,
-            file_download_bar: None,
-            rebuild_bar: None,
+            overall_download_pb: None,
+            file_download_pb: None,
+            rebuild_pb: None,
         }
     }
 }
@@ -28,68 +32,72 @@ impl ChandlerUiHandler for IndicatifUiHandler {
     fn event(&mut self, e: &UiEvent) {
         match e {
             UiEvent::DownloadStart { file_count } => {
-                let bar = ProgressBar::new(*file_count as u64)
+                let pb = ProgressBar::new(*file_count as u64)
                     .with_style(
                         ProgressStyle::default_bar()
                             .template(" {prefix:>8} [{bar:40.cyan/blue}] {pos}/{len} {wide_msg}")
+                            .unwrap()
                             .progress_chars(&self.progress_chars),
                     )
                     .with_prefix("Overall")
                     .with_message("files downloaded...");
 
-                // Draw initial bar.
-                bar.tick();
+                let pb = self.multi_progress.add(pb);
 
-                self.overall_download_bar = Some(bar);
+                self.overall_download_pb = Some(pb);
             }
             UiEvent::DownloadProgress { files_processed } => {
-                if let Some(bar) = &self.overall_download_bar {
-                    bar.set_position(*files_processed as u64);
+                if let Some(pb) = &self.overall_download_pb {
+                    pb.set_position(*files_processed as u64);
                 }
             }
             UiEvent::DownloadComplete {
                 files_downloaded,
                 files_failed,
             } => {
-                if let Some(bar) = self.overall_download_bar.take() {
-                    bar.println(format!(
+                if let Some(pb) = self.overall_download_pb.take() {
+                    pb.println(format!(
                         "Download finished. {} files downloaded, {} files failed.",
                         files_downloaded, files_failed
                     ));
-                    bar.finish_and_clear();
+                    pb.finish_and_clear();
                 }
             }
             UiEvent::DownloadFileStart { url, .. } => {
-                let bar = ProgressBar::new(0)
-                    .with_style(ProgressStyle::default_spinner().template(" {prefix:>8} {bytes}/? {wide_msg}"))
+                let pb = ProgressBar::new(0)
+                    .with_style(
+                        ProgressStyle::default_spinner()
+                            .template(" {prefix:>8} {bytes}/? {wide_msg}")
+                            .unwrap(),
+                    )
                     .with_prefix("Download")
                     .with_message(url.to_owned());
 
-                // Draw initial bar.
-                bar.tick();
+                let pb = self.multi_progress.add(pb);
 
-                self.file_download_bar = Some(bar);
+                self.file_download_pb = Some(pb);
             }
             UiEvent::DownloadFileInfo { size } => {
-                if let Some(bar) = &self.file_download_bar {
+                if let Some(pb) = &self.file_download_pb {
                     if let Some(size) = *size {
-                        bar.set_style(
+                        pb.set_style(
                             ProgressStyle::default_bar()
                                 .template(" {prefix:>8} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {wide_msg}")
+                                .unwrap()
                                 .progress_chars(&self.progress_chars),
                         );
-                        bar.set_length(size);
+                        pb.set_length(size);
                     }
                 }
             }
             UiEvent::DownloadFileProgress { bytes_downloaded } => {
-                if let Some(bar) = &self.file_download_bar {
-                    bar.set_position(*bytes_downloaded);
+                if let Some(pb) = &self.file_download_pb {
+                    pb.set_position(*bytes_downloaded);
                 }
             }
             UiEvent::DownloadFileComplete(_) => {
-                if let Some(bar) = &self.file_download_bar.take() {
-                    bar.finish_and_clear();
+                if let Some(pb) = &self.file_download_pb.take() {
+                    pb.finish_and_clear();
                 }
             }
 
@@ -117,25 +125,28 @@ impl ChandlerUiHandler for IndicatifUiHandler {
             UiEvent::RebuildStart { path, file_count } => {
                 println!("Rebuilding project at {}...", path.display());
 
-                let bar = ProgressBar::new(*file_count as u64)
+                let pb = ProgressBar::new(*file_count as u64)
                     .with_style(
                         ProgressStyle::default_bar()
                             .template(" {prefix:>8} [{bar:40.cyan/blue}] {pos}/{len} {wide_msg}")
+                            .unwrap()
                             .progress_chars(&self.progress_chars),
                     )
                     .with_prefix("Rebuild");
 
-                self.rebuild_bar = Some(bar);
+                let pb = self.multi_progress.add(pb);
+
+                self.rebuild_pb = Some(pb);
             }
             UiEvent::RebuildProgress { files_processed } => {
-                if let Some(bar) = &self.rebuild_bar {
-                    bar.set_position(*files_processed as u64);
+                if let Some(pb) = &self.rebuild_pb {
+                    pb.set_position(*files_processed as u64);
                 }
             }
             UiEvent::RebuildComplete => {
-                if let Some(bar) = &self.rebuild_bar.take() {
-                    bar.println("Rebuild finished.");
-                    bar.finish_and_clear();
+                if let Some(pb) = &self.rebuild_pb.take() {
+                    pb.println("Rebuild finished.");
+                    pb.finish_and_clear();
                 }
             }
         }
@@ -143,5 +154,9 @@ impl ChandlerUiHandler for IndicatifUiHandler {
 
     fn is_cancelled(&self) -> bool {
         (self.cancel_check)()
+    }
+
+    fn clear(&mut self) {
+        self.multi_progress.clear().unwrap();
     }
 }
