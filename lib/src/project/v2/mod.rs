@@ -215,7 +215,7 @@ impl Project for V2Project {
     }
 
     fn rebuild(&mut self, ui_handler: &mut dyn ChandlerUiHandler) -> Result<(), ChandlerError> {
-        let _result = rebuild_thread(&mut self.state, ui_handler)?;
+        rebuild_thread(&mut self.state, ui_handler)?;
 
         // Write rebuilt thread to file.
         self.state.write_thread()?;
