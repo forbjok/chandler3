@@ -19,11 +19,6 @@ pub struct ChandlerConfig {
     pub download_path: Option<PathBuf>,
 }
 
-#[derive(Debug)]
-pub struct ResolvedChandlerConfig {
-    pub download_path: PathBuf,
-}
-
 impl ChandlerConfig {
     pub fn from_file(path: &Path) -> Result<Self, ChandlerError> {
         let mut file = util::open_file(path).map_err(ChandlerError::OpenFile)?;
@@ -77,21 +72,6 @@ impl ChandlerConfig {
         }
 
         Ok(())
-    }
-
-    pub fn resolve(self) -> Result<ResolvedChandlerConfig, ChandlerError> {
-        let download_path = if let Some(download_path) = self.download_path {
-            util::normalize_path(download_path)
-        } else if let Some(os_download_path) = dirs::download_dir() {
-            os_download_path.join("chandler3")
-        } else {
-            return Err(ChandlerError::Config(
-                "No default download directory found. A download path must be specified in the Chandler config file."
-                    .into(),
-            ));
-        };
-
-        Ok(ResolvedChandlerConfig { download_path })
     }
 }
 

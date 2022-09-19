@@ -11,13 +11,13 @@ mod v3;
 
 use common::LinkInfo;
 
-use crate::config;
 use crate::config::chandler::ChandlerConfig;
 use crate::config::sites::SitesConfig;
 use crate::error::*;
 use crate::misc::site_resolver::{self, SiteResolver};
 use crate::threadupdater::{ParserType, ThreadUpdater};
 use crate::ui::*;
+use crate::{config, util};
 
 const DEFAULT_DOWNLOAD_EXTENSIONS: &[&str] = &["css", "gif", "ico", "jpeg", "jpg", "png", "webm"];
 
@@ -243,7 +243,7 @@ impl CreateProjectBuilder {
                 None
             };
 
-            let config = config.unwrap_or_default().resolve()?;
+            let config = config.unwrap_or_default();
 
             let site_resolver = if let Some(site_resolver) = self.site_resolver {
                 Some(site_resolver)
@@ -270,7 +270,18 @@ impl CreateProjectBuilder {
                 };
 
                 if path.is_none() {
-                    let new_path = config.download_path.join(site_info.name).join(site_info.path);
+                    let download_path = if let Some(download_path) = config.download_path {
+                        util::normalize_path(download_path)
+                    } else if let Some(os_download_path) = dirs::download_dir() {
+                        os_download_path.join("chandler3")
+                    } else {
+                        return Err(ChandlerError::Config(
+                            "No default download directory found. A download path must be specified in the Chandler config file."
+                                .into(),
+                        ));
+                    };
+
+                    let new_path = download_path.join(site_info.name).join(site_info.path);
 
                     // If a project already exists at the generated path, load it.
                     if exists_at(&new_path).is_some() {
