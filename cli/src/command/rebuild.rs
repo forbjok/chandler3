@@ -7,7 +7,7 @@ use crate::error::*;
 
 pub fn rebuild(path: &Path, ui: &mut dyn ChandlerUiHandler) -> Result<(), CliError> {
     // Try to load Chandler project.
-    let mut project = project::load(&path)?;
+    let mut project = project::load(path)?;
 
     project.rebuild(ui)?;
 
