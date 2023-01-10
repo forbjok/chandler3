@@ -20,7 +20,7 @@ reqwest = { version = "0.11.13", features = ["blocking", "gzip"] }
 serde = "1.0.148"
 serde_derive = "1.0.148"
 serde_json = "1.0.89"
-sysinfo = "0.26.8"
+sysinfo = "0.27.4"
 thiserror = "1.0.37"
 toml_edit = { version = "0.15.0", features = ["easy"] }
 tracing = "0.1.37"
