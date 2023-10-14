@@ -24,7 +24,7 @@ pub fn update_thread(
 
     // Construct filename
     let filename = format!("{}.html", unix_now);
-    let new_thread_file_path = state.originals_path.join(&filename);
+    let new_thread_file_path = state.originals_path.join(filename);
 
     let result = (|| {
         let url = &state.thread_url;

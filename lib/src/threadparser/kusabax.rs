@@ -12,7 +12,7 @@ use crate::util;
 
 use super::*;
 
-static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^reply_(\d+)"#).unwrap());
+static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^reply_(\d+)").unwrap());
 
 pub struct KusabaxThread {
     pub root: NodeRef,

@@ -13,7 +13,7 @@ use crate::util;
 
 use super::*;
 
-static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^pc(\d+)"#).unwrap());
+static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pc(\d+)").unwrap());
 
 pub struct LainchanThread {
     pub root: NodeRef,

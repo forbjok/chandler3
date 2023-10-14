@@ -8,7 +8,7 @@ use crate::error::*;
 use crate::threadupdater::ParserType;
 
 static REGEX_SPLIT_URL: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"^http(?:s)?://([\w\.:]+)/(?:(.+)/)*([^\.]+).*"#).unwrap());
+    Lazy::new(|| Regex::new(r"^http(?:s)?://([\w\.:]+)/(?:(.+)/)*([^\.]+).*").unwrap());
 
 pub struct SiteInfo {
     pub name: String,
@@ -43,7 +43,7 @@ pub fn unknown_site(url: &str) -> Result<SiteInfo, ChandlerError> {
 
 /// Sanitize path to ensure it does not contain invalid filesystem characters.
 pub fn sanitize_path(s: &str) -> Cow<str> {
-    static SANITIZE_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r#":|\*|\|"#).unwrap());
+    static SANITIZE_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r":|\*|\|").unwrap());
 
     SANITIZE_PATH_REGEX.replace_all(s, "_")
 }

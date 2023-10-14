@@ -91,7 +91,7 @@ impl ProjectLoader for V3Project {
         };
 
         // Save initial project config and state.
-        pf::Config::from(&state).save(&config_file_path)?;
+        pf::Config::from(&state).save(config_file_path)?;
         pf::State::default().save(&state_file_path)?;
 
         let project = Self {
@@ -124,7 +124,7 @@ impl ProjectLoader for V3Project {
         let thread_file_path = root_path.join(THREAD_FILE_NAME);
 
         // Load project config and state.
-        let config = pf::Config::load(&config_file_path)?;
+        let config = pf::Config::load(config_file_path)?;
         let state = pf::State::load(&state_file_path)?;
 
         let parser: ParserType = config.parser.into();
