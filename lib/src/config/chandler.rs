@@ -79,8 +79,7 @@ impl FromStr for ChandlerConfig {
     type Err = ChandlerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config: Self =
-            toml_edit::easy::from_str(s).map_err(|err| ChandlerError::ParseConfig(err.to_string().into()))?;
+        let config: Self = toml::from_str(s).map_err(|err| ChandlerError::ParseConfig(err.to_string().into()))?;
 
         Ok(config)
     }

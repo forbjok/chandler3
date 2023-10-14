@@ -112,8 +112,7 @@ impl FromStr for SitesConfig {
     type Err = ChandlerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config: Self =
-            toml_edit::easy::from_str(s).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))?;
+        let config: Self = toml::from_str(s).map_err(|err| ChandlerError::ParseConfig(Cow::Owned(err.to_string())))?;
 
         Ok(config)
     }
