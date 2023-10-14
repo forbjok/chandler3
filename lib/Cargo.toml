@@ -12,7 +12,7 @@ anyhow = "1.0.66"
 chrono = { version = "0.4.23", features = ["serde"] }
 dirs = "4.0.0"
 html5ever = "0.26.0"
-kuchiki = { git = "https://github.com/kuchiki-rs/kuchiki.git", rev = "d218ccb1bf79616ff2f0b7eb1f1262fef1274c66" }
+kuchikiki = "0.8.2"
 once_cell = "1.16.0"
 os_info = "3.5.1"
 regex = "1.7.0"

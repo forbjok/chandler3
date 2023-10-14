@@ -1,12 +1,12 @@
 // This module is only used in tests.
 
-use kuchiki::*;
+use kuchikiki::*;
 
 /// Parse string into Kuchiki node.
 pub fn parse_string(html_str: &str) -> NodeRef {
     use html5ever::tendril::TendrilSink;
 
-    kuchiki::parse_html().from_utf8().one(html_str.as_bytes())
+    kuchikiki::parse_html().from_utf8().one(html_str.as_bytes())
 }
 
 /// Serialize Kuchiki node to string.

@@ -7,7 +7,7 @@ use crate::html;
 use crate::util;
 
 use html5ever::local_name;
-use kuchiki::*;
+use kuchikiki::*;
 
 pub struct FourchanThread {
     pub root: NodeRef,

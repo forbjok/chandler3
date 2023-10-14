@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use html5ever::LocalName;
-use kuchiki::*;
+use kuchikiki::*;
 
 use super::*;
 

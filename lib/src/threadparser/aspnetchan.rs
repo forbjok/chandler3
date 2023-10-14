@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 
 use html5ever::local_name;
-use kuchiki::*;
+use kuchikiki::*;
 
 use crate::error::ChandlerError;
 use crate::html;

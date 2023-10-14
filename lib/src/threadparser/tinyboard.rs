@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::iter;
 
 use html5ever::{local_name, namespace_url, ns, QualName};
-use kuchiki::*;
+use kuchikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
 

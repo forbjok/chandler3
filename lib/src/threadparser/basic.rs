@@ -5,7 +5,7 @@ use crate::error::ChandlerError;
 use crate::html;
 use crate::util;
 
-use kuchiki::*;
+use kuchikiki::*;
 
 pub struct BasicThread {
     pub root: NodeRef,
