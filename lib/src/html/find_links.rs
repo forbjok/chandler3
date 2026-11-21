@@ -1,4 +1,4 @@
-use html5ever::{local_name, LocalName};
+use html5ever::{LocalName, local_name};
 use kuchikiki::*;
 
 use super::*;

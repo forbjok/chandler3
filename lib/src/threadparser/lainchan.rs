@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::iter;
 
-use html5ever::{local_name, namespace_url, ns, QualName};
+use html5ever::{QualName, local_name, namespace_url, ns};
 use kuchikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -122,21 +122,25 @@ impl MergeableImageboardThread for LainchanThread {
         // Create temporary insert marker node.
         let insert_marker_node = NodeRef::new_comment("INSERT");
 
-        let last_reply_id = match self.get_all_replies()?.last() { Some(last_original_reply) => {
-            last_original_reply.node.insert_after(insert_marker_node.clone());
+        let last_reply_id = match self.get_all_replies()?.last() {
+            Some(last_original_reply) => {
+                last_original_reply.node.insert_after(insert_marker_node.clone());
 
-            last_original_reply.id
-        } _ => {
-            // Get original OP element.
-            let original_op_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["op"])
-                .next()
-                .ok_or_else(|| ChandlerError::Other("No OP element found in original thread!".into()))?;
+                last_original_reply.id
+            }
+            _ => {
+                // Get original OP element.
+                let original_op_element =
+                    html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["op"])
+                        .next()
+                        .ok_or_else(|| ChandlerError::Other("No OP element found in original thread!".into()))?;
 
-            // Insert the insert marker node after the original OP element.
-            original_op_element.insert_after(insert_marker_node.clone());
+                // Insert the insert marker node after the original OP element.
+                original_op_element.insert_after(insert_marker_node.clone());
 
-            0
-        }};
+                0
+            }
+        };
 
         let mut first_reply = last_reply_id == 0;
         let mut new_replies: Vec<Self::Reply> = Vec::new();

@@ -5,9 +5,9 @@ use chandler::project::{self, ProjectUpdateResult};
 use chandler::util;
 use tracing::info;
 
+use crate::ProjectOptions;
 use crate::result::*;
 use crate::ui::*;
-use crate::ProjectOptions;
 
 use super::*;
 

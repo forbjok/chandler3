@@ -59,13 +59,14 @@ impl ProjectLoader for V2Project {
             ChandlerError::CreateProject(Cow::Owned(format!("Cannot create originals directory: {}", err)))
         })?;
 
-        let pidlock = match acquire_pidlock(&root_path, PID_FILE_NAME) { Some(pidlock) => {
-            pidlock
-        } _ => {
-            return Err(ChandlerError::CreateProject(
-                "Could not acquire PID lock for project.".into(),
-            ));
-        }};
+        let pidlock = match acquire_pidlock(&root_path, PID_FILE_NAME) {
+            Some(pidlock) => pidlock,
+            _ => {
+                return Err(ChandlerError::CreateProject(
+                    "Could not acquire PID lock for project.".into(),
+                ));
+            }
+        };
 
         let config_file_path = project_path.join(CONFIG_FILE_NAME);
         let state_file_path = project_path.join(STATE_FILE_NAME);
@@ -107,13 +108,14 @@ impl ProjectLoader for V2Project {
     fn load(path: &Path) -> Result<Self::P, ChandlerError> {
         let root_path = path.to_path_buf();
 
-        let pidlock = match acquire_pidlock(&root_path, PID_FILE_NAME) { Some(pidlock) => {
-            pidlock
-        } _ => {
-            return Err(ChandlerError::CreateProject(
-                "Could not acquire PID lock for project.".into(),
-            ));
-        }};
+        let pidlock = match acquire_pidlock(&root_path, PID_FILE_NAME) {
+            Some(pidlock) => pidlock,
+            _ => {
+                return Err(ChandlerError::CreateProject(
+                    "Could not acquire PID lock for project.".into(),
+                ));
+            }
+        };
 
         let project_path = root_path.join(PROJECT_DIR_NAME);
         let originals_path = project_path.join(ORIGINALS_DIR_NAME);
@@ -139,12 +141,9 @@ impl ProjectLoader for V2Project {
             .links
             .failed
             .into_iter()
-            .filter_map(|url| {
-                match link_path_generator.generate_path(&url) { Ok(Some(path)) => {
-                    Some((url, path))
-                } _ => {
-                    None
-                }}
+            .filter_map(|url| match link_path_generator.generate_path(&url) {
+                Ok(Some(path)) => Some((url, path)),
+                _ => None,
             })
             .map(|(url, path)| LinkInfo { url, path })
             .collect();

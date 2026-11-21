@@ -1,5 +1,5 @@
-use crate::threadparser::basic::BasicThread;
 use crate::threadparser::HtmlDocument;
+use crate::threadparser::basic::BasicThread;
 
 use super::*;
 
