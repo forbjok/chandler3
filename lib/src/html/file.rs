@@ -1,14 +1,16 @@
-use std::path::Path;
+use std::{borrow::Cow, fs, io::BufWriter, path::Path};
 
+use anyhow::Context as _;
 use scraper::Html;
 
-use crate::error::*;
+use crate::{error::*, util};
 
-pub fn parse_file(filename: &Path) -> Result<Html, ChandlerError> {
-    let html = fs::read_to_string(file_path).map_err(ChandlerError::OpenFile)?;
-    let doc = Html::parse_document(&html);
+pub fn parse_file(file_path: &Path) -> Result<Html, ChandlerError> {
+    let html = fs::read_to_string(file_path)
+        .context("Error reading HTML file")
+        .map_err(ChandlerError::OpenFile)?;
 
-    Ok(Self::from_document(doc))
+    Ok(Html::parse_document(&html))
 }
 
 pub fn write_file(html: &Html, file_path: &Path) -> Result<(), ChandlerError> {

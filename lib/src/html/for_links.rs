@@ -4,6 +4,8 @@ use ego_tree::{NodeId, NodeMut};
 use html5ever::{LocalName, Namespace, QualName, local_name};
 use scraper::{ElementRef, Html, Node, Selector, node::Element};
 
+use crate::ChandlerError;
+
 #[derive(Debug)]
 pub enum LinkTag {
     A,
@@ -33,7 +35,7 @@ pub fn for_links_mut(
         return Ok(());
     };
 
-    let mut ids: Vec<_> = [&A_SELECTOR, &IMG_SELECTOR, &LINK_SELECTOR]
+    let ids: Vec<_> = [&A_SELECTOR, &IMG_SELECTOR, &LINK_SELECTOR]
         .iter()
         .map(|sel| element.select(sel))
         .flatten()
@@ -41,7 +43,9 @@ pub fn for_links_mut(
         .collect();
 
     for id in ids.into_iter() {
-        let Some(node) = html.tree.get_mut(id) else { continue };
+        let Some(mut node) = html.tree.get_mut(id) else {
+            continue;
+        };
 
         let Some(link) = LinkMut::from_node_mut(&mut node) else {
             continue;

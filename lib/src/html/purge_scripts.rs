@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use scraper::{Html, Selector};
 
 static SCRIPT_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("script").unwrap());

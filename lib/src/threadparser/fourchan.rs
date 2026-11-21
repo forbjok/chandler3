@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::LazyLock;
 
 use super::*;
 use crate::error::ChandlerError;
@@ -9,6 +10,7 @@ use ego_tree::NodeRef;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
+use scraper::Selector;
 use scraper::node::Comment;
 
 pub struct FourchanThread {
@@ -86,7 +88,7 @@ impl HtmlDocument for FourchanThread {
 
     fn for_links_mut(
         &mut self,
-        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
+        action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
         html::for_links_mut(&mut self.html, None, action)
     }
@@ -117,8 +119,10 @@ impl MergeableImageboardThread for FourchanThread {
 
         let last_reply_id = match self.get_all_replies()?.last() {
             Some(last_original_reply) => {
-                let last_original_reply_node = self.html.tree.get_mut(last_original_reply.node_id).unwrap();
-                insert_marker_node = last_original_reply_node.insert_after(Node::Comment(Comment("INSERT")));
+                let mut last_original_reply_node = self.html.tree.get_mut(last_original_reply.node_id).unwrap();
+                insert_marker_node = last_original_reply_node.insert_after(Node::Comment(Comment {
+                    comment: "INSERT".into(),
+                }));
 
                 last_original_reply.id
             }
@@ -128,7 +132,9 @@ impl MergeableImageboardThread for FourchanThread {
                     .ok_or_else(|| ChandlerError::Other("Could not get thread element".into()))?;
 
                 let thread_element = self.html.tree.get_mut(thread_element.id()).unwrap();
-                insert_marker_node = thread_element.append(Node::Comment(Comment("INSERT")));
+                insert_marker_node = thread_element.append(Node::Comment(Comment {
+                    comment: "INSERT".into(),
+                }));
 
                 0
             }

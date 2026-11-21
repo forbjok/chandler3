@@ -21,10 +21,10 @@ impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
 
         let new_post_count = (1 + self.thread.get_all_replies().map_or(0, |iter| iter.count())) as u32;
 
-        let mut new_links: Vec<html::Link> = Vec::new();
+        let mut new_links: Vec<html::LinkMut> = Vec::new();
 
         // Process all links in the new thread.
-        self.thread.for_links(|link| {
+        self.thread.for_links_mut(|link| {
             new_links.push(link);
 
             Ok(())
@@ -51,11 +51,11 @@ impl<TP: MergeableImageboardThread> ThreadUpdater for MergingThreadUpdater<TP> {
         let new_replies = thread.merge_replies_from(new_thread)?;
         let new_post_count = new_replies.len() as u32;
 
-        let mut new_links: Vec<html::Link> = Vec::new();
+        let mut new_links: Vec<html::LinkMut> = Vec::new();
 
         // Process links for all new replies.
         for reply in new_replies.iter() {
-            thread.for_reply_links(reply, |link| {
+            thread.for_reply_links_mut(reply, |link| {
                 new_links.push(link);
 
                 Ok(())

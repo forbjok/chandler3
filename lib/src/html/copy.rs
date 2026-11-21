@@ -3,11 +3,11 @@ use std::collections::VecDeque;
 use ego_tree::{NodeMut, NodeRef};
 use scraper::Node;
 
-pub fn copy_subtree(src: NodeRef<'_, Node>, dst: &mut NodeMut<'_, Node>, insert_root_node: F)
+pub fn copy_subtree<'a, F>(src: NodeRef<'a, Node>, dst: &mut NodeMut<'a, Node>, insert_root_node: F)
 where
-    F: FnMut(Node, NodeMut<'_, Node>) -> NodeMut<'_, Node>,
+    F: Fn(Node, &mut NodeMut<'a, Node>) -> NodeMut<'a, Node>,
 {
-    let new_root = insert_root_node(src.value().clone(), dst);
+    let mut new_root = insert_root_node(src.value().clone(), dst);
     let dst_id = new_root.id();
     let dst_tree = new_root.tree();
 
