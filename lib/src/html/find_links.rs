@@ -1,5 +1,5 @@
 use html5ever::{LocalName, local_name};
-use kuchikiki::*;
+use kuchikikiki::*;
 
 use super::*;
 

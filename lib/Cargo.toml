@@ -12,7 +12,7 @@ anyhow = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 dirs = { workspace = true }
 html5ever = { workspace = true }
-kuchikiki = { workspace = true }
+kuchikikiki = { workspace = true }
 once_cell = { workspace = true }
 os_info = { workspace = true }
 regex = { workspace = true }

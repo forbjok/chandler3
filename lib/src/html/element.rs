@@ -1,5 +1,5 @@
 use html5ever::local_name;
-use kuchikiki::*;
+use kuchikikiki::*;
 
 use crate::util::IsSubset;
 

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 
 use html5ever::local_name;
-use kuchikiki::*;
+use kuchikikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
 

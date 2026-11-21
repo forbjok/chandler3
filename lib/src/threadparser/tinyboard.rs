@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::iter;
 
-use html5ever::{QualName, local_name, namespace_url, ns};
-use kuchikiki::*;
+use html5ever::{QualName, local_name, ns};
+use kuchikikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
