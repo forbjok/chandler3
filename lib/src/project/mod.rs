@@ -211,10 +211,10 @@ impl CreateProjectBuilder {
     }
 
     pub fn load_or_create(self) -> Result<Box<dyn Project>, ChandlerError> {
-        if let Some(path) = &self.path {
-            if exists_at(path).is_some() {
-                return load(path);
-            }
+        if let Some(path) = &self.path
+            && exists_at(path).is_some()
+        {
+            return load(path);
         }
 
         if let Some(url) = self.url {

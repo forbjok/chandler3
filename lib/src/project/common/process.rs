@@ -63,23 +63,23 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
                     url.to_string()
                 };
 
-                if let Some(extension) = file_url.rsplit('.').next() {
-                    if state.download_extensions.contains(extension) {
-                        if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
-                            // Replace invalid filesystem characters in path.
-                            let path = replace_invalid_filesystem_characters(&path);
+                if let Some(extension) = file_url.rsplit('.').next()
+                    && state.download_extensions.contains(extension)
+                {
+                    if let Some(path) = state.link_path_generator.generate_path(&file_url)? {
+                        // Replace invalid filesystem characters in path.
+                        let path = replace_invalid_filesystem_characters(&path);
 
-                            link.replace(&path);
+                        link.replace(&path);
 
-                            return Ok(Some(LinkInfo {
-                                url: absolute_url.into(),
-                                path,
-                            }));
-                        } else {
-                            return Err(ChandlerError::Other(
-                                format!("Could not generate local path for url: {}", &href).into(),
-                            ));
-                        }
+                        return Ok(Some(LinkInfo {
+                            url: absolute_url.into(),
+                            path,
+                        }));
+                    } else {
+                        return Err(ChandlerError::Other(
+                            format!("Could not generate local path for url: {}", href).into(),
+                        ));
                     }
                 }
 

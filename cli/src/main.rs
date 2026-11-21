@@ -134,11 +134,7 @@ fn main() {
 
         let cancel_check = Box::new(move || {
             // If cancellation has been requested, break out immediately.
-            if cancel.load(Ordering::SeqCst) {
-                return true;
-            }
-
-            false
+            cancel.load(Ordering::SeqCst)
         });
 
         if cfg.progress.enable {

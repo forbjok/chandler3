@@ -108,7 +108,7 @@ impl Link {
             }
 
             if let Some(original_value) = original_value {
-                attrs.insert(format!("data-original-{}", &attr_name), original_value);
+                attrs.insert(format!("data-original-{}", attr_name), original_value);
             }
         }
     }

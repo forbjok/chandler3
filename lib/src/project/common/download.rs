@@ -189,12 +189,11 @@ pub fn download_linked_content(
 
         // If the file already exists, try to get its modification time
         // so that we can pass it to the request's If-Modified-Since header.
-        if path.exists() {
-            if let Ok(m) = fs::metadata(&path) {
-                if let Ok(st) = m.modified() {
-                    if_modified_since = Some(st.into());
-                }
-            }
+        if path.exists()
+            && let Ok(m) = fs::metadata(&path)
+            && let Ok(st) = m.modified()
+        {
+            if_modified_since = Some(st.into());
         }
 
         let success = match download_file(url, &path, if_modified_since, ui_handler) {

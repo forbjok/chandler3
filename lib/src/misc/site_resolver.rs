@@ -42,7 +42,7 @@ pub fn unknown_site(url: &str) -> Result<SiteInfo, ChandlerError> {
 }
 
 /// Sanitize path to ensure it does not contain invalid filesystem characters.
-pub fn sanitize_path(s: &str) -> Cow<str> {
+pub fn sanitize_path(s: &str) -> Cow<'_, str> {
     static SANITIZE_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r":|\*|\|").unwrap());
 
     SANITIZE_PATH_REGEX.replace_all(s, "_")

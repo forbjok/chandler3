@@ -78,16 +78,16 @@ impl ChandlerUiHandler for IndicatifUiHandler {
                 self.file_download_pb = Some(pb);
             }
             UiEvent::DownloadFileInfo { size } => {
-                if let Some(pb) = &self.file_download_pb {
-                    if let Some(size) = *size {
-                        pb.set_style(
-                            ProgressStyle::default_bar()
-                                .template(" {prefix:>8} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {wide_msg}")
-                                .unwrap()
-                                .progress_chars(&self.progress_chars),
-                        );
-                        pb.set_length(size);
-                    }
+                if let Some(pb) = &self.file_download_pb
+                    && let Some(size) = *size
+                {
+                    pb.set_style(
+                        ProgressStyle::default_bar()
+                            .template(" {prefix:>8} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {wide_msg}")
+                            .unwrap()
+                            .progress_chars(&self.progress_chars),
+                    );
+                    pb.set_length(size);
                 }
             }
             UiEvent::DownloadFileProgress { bytes_downloaded } => {
