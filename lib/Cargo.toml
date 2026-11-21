@@ -11,11 +11,11 @@ edition = "2024"
 anyhow = { workspace = true }
 dirs = { workspace = true }
 html5ever = { workspace = true }
-kuchikikiki = { workspace = true }
 once_cell = { workspace = true }
 os_info = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "gzip"] }
+scraper = { workspace = true }
 serde = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }

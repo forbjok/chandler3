@@ -82,12 +82,7 @@ impl HtmlDocument for PonychanThread {
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
-        let mut file = util::create_file(file_path).map_err(ChandlerError::CreateFile)?;
-
-        html5ever::serialize(&mut file, &self.root, Default::default())
-            .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
-
-        Ok(())
+        html::write_file(&self.html, file_path)
     }
 
     fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
+use std::io::BufWriter;
 
 use super::*;
 use crate::error::ChandlerError;
@@ -7,48 +8,37 @@ use crate::html;
 use crate::util;
 
 use html5ever::local_name;
-use kuchikikiki::*;
+use scraper::ElementRef;
+use scraper::Html;
 
 pub struct FourchanThread {
-    pub root: NodeRef,
+    pub html: Html,
 }
 
 #[derive(Clone, Debug)]
-pub struct FourchanReply {
+pub struct FourchanReply<'a> {
     pub id: u32,
-    pub node: NodeRef,
+    pub element: ElementRef<'a>,
 }
 
-impl FourchanReply {
-    pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get reply ID from node.
-        let id = (|| {
-            if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute.
-                if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
-                    // Try to parse it as an integer, skipping the "pc" prefix.
-                    if let Ok(id) = id_attr[2..].parse::<u32>() {
-                        return Some(id);
-                    }
-                }
-            }
+impl<'a> FourchanReply<'a> {
+    pub fn from_node(element: ElementRef<'a>) -> Option<Self> {
+        let id = element
+            .attr("id")
+            .and_then(|v| v.strip_prefix("pc").and_then(|v| v.parse::<u32>().ok()))?;
 
-            None
-        })();
-
-        // Convert ID and node into reply if found.
-        id.map(|id| Self { id, node })
+        Some(Self { id, element })
     }
 }
 
-struct GetReplies {
-    replies: VecDeque<NodeRef>,
+struct GetReplies<'a> {
+    replies: VecDeque<ElementRef<'a>>,
 }
 
-impl Iterator for GetReplies {
-    type Item = FourchanReply;
+impl<'a> Iterator for GetReplies<'a> {
+    type Item = FourchanReply<'a>;
 
-    fn next(&mut self) -> Option<FourchanReply> {
+    fn next(&mut self) -> Option<FourchanReply<'a>> {
         while let Some(node) = self.replies.pop_front() {
             if let Some(reply) = FourchanReply::from_node(node) {
                 return Some(reply);
@@ -60,14 +50,14 @@ impl Iterator for GetReplies {
 }
 
 impl HtmlDocument for FourchanThread {
-    type Document = NodeRef;
+    type Document = Html;
 
     fn from_document(document: Self::Document) -> Self {
-        Self { root: document }
+        Self { html: document }
     }
 
     fn into_document(self) -> Self::Document {
-        self.root
+        self.html
     }
 
     fn from_file(file_path: &Path) -> Result<Self, ChandlerError> {
@@ -77,16 +67,11 @@ impl HtmlDocument for FourchanThread {
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
-        let mut file = util::create_file(file_path).map_err(ChandlerError::CreateFile)?;
-
-        html5ever::serialize(&mut file, &self.root, Default::default())
-            .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
-
-        Ok(())
+        html::write_file(&self.html, file_path)
     }
 
     fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
-        let links = html::find_links(self.root.clone());
+        let links = html::find_links(self.html.clone());
 
         for link in links.into_iter() {
             action(link)?;
@@ -95,8 +80,8 @@ impl HtmlDocument for FourchanThread {
         Ok(())
     }
 
-    fn purge_scripts(&self) -> Result<(), ChandlerError> {
-        html::purge_scripts(self.root.clone());
+    fn purge_scripts(&mut self) -> Result<(), ChandlerError> {
+        html::purge_scripts(&mut self.html);
 
         Ok(())
     }

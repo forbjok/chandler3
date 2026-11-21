@@ -1,16 +1,7 @@
-use html5ever::local_name;
-use kuchikikiki::*;
+use scraper::CaseSensitivity;
 
-use crate::util::IsSubset;
-
-pub fn has_classes(data: &ElementData, class_names: &[&str]) -> bool {
-    if let Some(class_attr) = data.attributes.borrow().get(local_name!("class")) {
-        // Split classes into a vector of strings
-        let classes: Vec<&str> = class_attr.split(' ').collect();
-
-        // Does the element have the specified classes?
-        class_names.is_subset(&classes)
-    } else {
-        false
-    }
+pub fn has_classes(element: ElementRef, class_names: &[&str]) -> bool {
+    class_names
+        .iter()
+        .all(|cn| element.value().has_class(cn, CaseSensitivity.CaseSensitive))
 }

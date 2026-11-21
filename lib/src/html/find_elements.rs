@@ -1,20 +1,20 @@
 use std::collections::VecDeque;
 
 use html5ever::LocalName;
-use kuchikikiki::*;
+use scraper::ElementRef;
 
 use super::*;
 
-pub struct FindElements<P> {
-    queue: VecDeque<NodeRef>,
+pub struct FindElements<'a, P> {
+    queue: VecDeque<ElementRef<'a>>,
     predicate: P,
 }
 
-impl<P> Iterator for FindElements<P>
+impl<'a, P> Iterator for FindElements<'a, P>
 where
     P: Fn(&ElementData) -> bool,
 {
-    type Item = NodeRef;
+    type Item = ElementRef<'a>;
 
     fn next(&mut self) -> Option<NodeRef> {
         // Grab next node from the queue

@@ -2,9 +2,9 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 
 use html5ever::local_name;
-use kuchikikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use scraper::Html;
 
 use crate::error::ChandlerError;
 use crate::html;
@@ -15,7 +15,7 @@ use super::*;
 static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^reply_(\d+)").unwrap());
 
 pub struct KusabaxThread {
-    pub root: NodeRef,
+    pub html: Html,
 }
 
 #[derive(Clone, Debug)]
@@ -65,14 +65,14 @@ impl Iterator for GetReplies {
 }
 
 impl HtmlDocument for KusabaxThread {
-    type Document = NodeRef;
+    type Document = Html;
 
     fn from_document(document: Self::Document) -> Self {
-        Self { root: document }
+        Self { html: document }
     }
 
     fn into_document(self) -> Self::Document {
-        self.root
+        self.html
     }
 
     fn from_file(file_path: &Path) -> Result<Self, ChandlerError> {
@@ -82,12 +82,7 @@ impl HtmlDocument for KusabaxThread {
     }
 
     fn write_file(&self, file_path: &Path) -> Result<(), ChandlerError> {
-        let mut file = util::create_file(file_path).map_err(ChandlerError::CreateFile)?;
-
-        html5ever::serialize(&mut file, &self.root, Default::default())
-            .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
-
-        Ok(())
+        html::write_file(&self.html, file_path)
     }
 
     fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
@@ -100,8 +95,8 @@ impl HtmlDocument for KusabaxThread {
         Ok(())
     }
 
-    fn purge_scripts(&self) -> Result<(), ChandlerError> {
-        html::purge_scripts(self.root.clone());
+    fn purge_scripts(&mut self) -> Result<(), ChandlerError> {
+        html::purge_scripts(&mut self.html);
 
         Ok(())
     }

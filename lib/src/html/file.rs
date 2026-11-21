@@ -1,17 +1,22 @@
 use std::path::Path;
 
+use scraper::Html;
+
 use crate::error::*;
-use crate::util;
 
-pub fn parse_file(filename: &Path) -> Result<kuchikikiki::NodeRef, ChandlerError> {
-    use html5ever::tendril::TendrilSink;
+pub fn parse_file(filename: &Path) -> Result<Html, ChandlerError> {
+    let html = fs::read_to_string(file_path).map_err(ChandlerError::OpenFile)?;
+    let doc = Html::parse_document(&html);
 
-    let mut f = util::open_file(filename).map_err(ChandlerError::OpenFile)?;
+    Ok(Self::from_document(doc))
+}
 
-    let dom = kuchikikiki::parse_html()
-        .from_utf8()
-        .read_from(&mut f)
-        .map_err(ChandlerError::ReadFile)?;
+pub fn write_file(html: &Html, file_path: &Path) -> Result<(), ChandlerError> {
+    let file = util::create_file(file_path).map_err(ChandlerError::CreateFile)?;
+    let mut writer = BufWriter::new(file);
 
-    Ok(dom)
+    html5ever::serialize(&mut writer, html, Default::default())
+        .map_err(|err| ChandlerError::Other(Cow::Owned(format!("Serialization error: {}", err))))?;
+
+    Ok(())
 }

@@ -1,5 +1,5 @@
 use html5ever::{LocalName, local_name};
-use kuchikikiki::*;
+use scraper::ElementRef;
 
 use super::*;
 
@@ -11,8 +11,8 @@ pub enum LinkTag {
 }
 
 #[derive(Debug)]
-pub struct Link {
-    node: NodeRef,
+pub struct Link<'a> {
+    element: ElementRef<'a>,
     tag: LinkTag,
 }
 
@@ -26,48 +26,41 @@ impl LinkTag {
     }
 }
 
-impl Link {
-    pub fn from_node(node: NodeRef) -> Option<Self> {
-        if let NodeData::Element(data) = node.data() {
-            match data.name.local {
-                // <a> element
-                local_name!("a") => {
-                    return Some(Link { node, tag: LinkTag::A });
-                }
-                // <img> element
-                local_name!("img") => {
-                    return Some(Link {
-                        node,
-                        tag: LinkTag::Img,
-                    });
-                }
-                // <link> element
-                local_name!("link") => {
-                    return Some(Link {
-                        node,
-                        tag: LinkTag::Link,
-                    });
-                }
-
-                _ => {}
+impl<'a> Link<'a> {
+    pub fn from_element(element: ElementRef<'a>) -> Option<Self> {
+        match element.value().name.local {
+            // <a> element
+            local_name!("a") => {
+                return Some(Link {
+                    element,
+                    tag: LinkTag::A,
+                });
             }
+            // <img> element
+            local_name!("img") => {
+                return Some(Link {
+                    element,
+                    tag: LinkTag::Img,
+                });
+            }
+            // <link> element
+            local_name!("link") => {
+                return Some(Link {
+                    element,
+                    tag: LinkTag::Link,
+                });
+            }
+
+            _ => {}
         }
 
         None
     }
 
     pub fn link(&self) -> Option<String> {
-        if let NodeData::Element(data) = self.node.data() {
-            let attr_name = self.tag.attr_name();
+        let attr_name = self.tag.attr_name();
 
-            let attrs = data.attributes.borrow();
-
-            if let Some(attr_value) = attrs.get(attr_name) {
-                return Some(attr_value.to_owned());
-            }
-        }
-
-        None
+        self.element.attr(&attr_name).map(|v| v.to_owned())
     }
 
     pub fn file_link(&self) -> Option<String> {

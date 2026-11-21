@@ -1,11 +1,16 @@
-use html5ever::local_name;
-use kuchikikiki::*;
-
-use crate::html;
+use scraper::{Html, Selector};
 
 /// Remove all script tags in this Kuchiki node and all children
-pub fn purge_scripts(node: NodeRef) {
-    for node in html::find_elements(node, |ed| ed.name.local == local_name!("script")) {
+pub fn purge_scripts(html: &mut Html) {
+    let selector = Selector::parse("script").unwrap();
+
+    let ids: Vec<_> = html.select(&selector).map(|e| e.id()).collect();
+
+    for id in ids {
+        let Some(mut node) = html.tree.get_mut(id) else {
+            continue;
+        };
+
         node.detach();
     }
 }

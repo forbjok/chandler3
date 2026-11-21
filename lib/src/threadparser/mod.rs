@@ -24,7 +24,7 @@ pub trait HtmlDocument: Sized {
     fn for_links(&self, action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError>;
 
     /// Purge all script tags
-    fn purge_scripts(&self) -> Result<(), ChandlerError>;
+    fn purge_scripts(&mut self) -> Result<(), ChandlerError>;
 }
 
 pub trait MergeableImageboardThread: HtmlDocument {
