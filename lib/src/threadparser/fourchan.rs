@@ -145,7 +145,7 @@ impl MergeableImageboardThread for FourchanThread {
                 .get(new_reply.node_id)
                 .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
 
-            html::copy_subtree(src, dst);
+            html::copy_subtree(reply_node, &mut insert_marker_node, |src, dst| dst.insert_before(src));
         }
 
         // Remove temporary insert marker node.
