@@ -1,8 +1,8 @@
 use std::sync::LazyLock;
 
-use ego_tree::NodeMut;
+use ego_tree::{NodeId, NodeMut};
 use html5ever::{LocalName, Namespace, QualName, local_name};
-use scraper::{Html, Node, Selector, node::Element};
+use scraper::{ElementRef, Html, Node, Selector, node::Element};
 
 #[derive(Debug)]
 pub enum LinkTag {
@@ -20,13 +20,22 @@ static A_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("a").un
 static IMG_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("img").unwrap());
 static LINK_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("link").unwrap());
 
-fn for_links_mut(
+pub fn for_links_mut(
     html: &mut Html,
+    element_id: Option<NodeId>,
     mut action: impl FnMut(LinkMut) -> Result<(), ChandlerError>,
 ) -> Result<(), ChandlerError> {
+    let Some(element) = (if let Some(id) = element_id {
+        html.tree.get(id).and_then(|n| ElementRef::wrap(n))
+    } else {
+        Some(html.root_element())
+    }) else {
+        return Ok(());
+    };
+
     let mut ids: Vec<_> = [&A_SELECTOR, &IMG_SELECTOR, &LINK_SELECTOR]
         .iter()
-        .map(|sel| html.select(sel))
+        .map(|sel| element.select(sel))
         .flatten()
         .map(|e| e.id())
         .collect();

@@ -1,45 +1,57 @@
-use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::io::BufWriter;
 
 use super::*;
 use crate::error::ChandlerError;
 use crate::html;
-use crate::util;
 
-use html5ever::local_name;
+use ego_tree::NodeId;
+use ego_tree::NodeRef;
 use scraper::ElementRef;
 use scraper::Html;
+use scraper::Node;
 
 pub struct FourchanThread {
     pub html: Html,
 }
 
 #[derive(Clone, Debug)]
-pub struct FourchanReply<'a> {
+pub struct FourchanReply {
     pub id: u32,
-    pub element: ElementRef<'a>,
+    pub node_id: NodeId,
 }
 
-impl<'a> FourchanReply<'a> {
-    pub fn from_node(element: ElementRef<'a>) -> Option<Self> {
+impl FourchanReply {
+    pub fn from_node(node: NodeRef<'_, Node>) -> Option<Self> {
+        let Node::Element(element) = node.value() else {
+            return None;
+        };
+
         let id = element
             .attr("id")
             .and_then(|v| v.strip_prefix("pc").and_then(|v| v.parse::<u32>().ok()))?;
 
-        Some(Self { id, element })
+        Some(Self { id, node_id: node.id() })
     }
 }
 
 struct GetReplies<'a> {
-    replies: VecDeque<ElementRef<'a>>,
+    nodes: VecDeque<NodeRef<'a, Node>>,
+}
+
+static ARCHIVED_ICON_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("img.archivedIcon").unwrap());
+static THREAD_SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("div.thread").unwrap());
+
+impl FourchanThread {
+    fn get_thread_element(&self) -> Option<ElementRef> {
+        self.html.select(&THREAD_SELECTOR).next()
+    }
 }
 
 impl<'a> Iterator for GetReplies<'a> {
-    type Item = FourchanReply<'a>;
+    type Item = FourchanReply;
 
-    fn next(&mut self) -> Option<FourchanReply<'a>> {
-        while let Some(node) = self.replies.pop_front() {
+    fn next(&mut self) -> Option<FourchanReply> {
+        while let Some(node) = self.nodes.pop_front() {
             if let Some(reply) = FourchanReply::from_node(node) {
                 return Some(reply);
             }
@@ -70,14 +82,11 @@ impl HtmlDocument for FourchanThread {
         html::write_file(&self.html, file_path)
     }
 
-    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
-        let links = html::find_links(self.html.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
+    fn for_links_mut(
+        &mut self,
+        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
+    ) -> Result<(), ChandlerError> {
+        html::for_links_mut(&mut self.html, None, action)
     }
 
     fn purge_scripts(&mut self) -> Result<(), ChandlerError> {
@@ -90,51 +99,42 @@ impl HtmlDocument for FourchanThread {
 impl MergeableImageboardThread for FourchanThread {
     type Reply = FourchanReply;
 
-    fn get_all_replies(&self) -> Result<Box<dyn Iterator<Item = Self::Reply>>, ChandlerError> {
-        let thread_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
-            .next()
+    fn get_all_replies<'a>(&'a self) -> Result<Box<dyn Iterator<Item = Self::Reply> + 'a>, ChandlerError> {
+        let thread_element = self
+            .get_thread_element()
             .ok_or_else(|| ChandlerError::Other("No thread element found!".into()))?;
 
-        let replies = thread_element.children().skip(1).collect();
+        let nodes: VecDeque<_> = thread_element.children().skip(1).collect();
 
-        Ok(Box::new(GetReplies { replies }))
+        Ok(Box::new(GetReplies { nodes }))
     }
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
         // Create temporary insert marker node.
-        let insert_marker_node = NodeRef::new_comment("INSERT");
 
         let last_reply_id = match self.get_all_replies()?.last() {
-            Some(last_original_reply) => {
-                last_original_reply.node.insert_after(insert_marker_node.clone());
-
-                last_original_reply.id
-            }
-            _ => {
-                // Get original thread element.
-                let original_thread_element =
-                    html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["thread"])
-                        .next()
-                        .ok_or_else(|| ChandlerError::Other("No thread element found in original thread!".into()))?;
-
-                // Append the insert marker node to the original thread element.
-                original_thread_element.append(insert_marker_node.clone());
-
-                0
-            }
+            Some(last_original_reply) => last_original_reply.id,
+            _ => 0,
         };
 
         let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-        for new_reply in new.get_all_replies()? {
-            if new_reply.id <= last_reply_id {
-                continue;
-            }
+        let new_replies: Vec<_> = new.get_all_replies()?.filter(|r| r.id <= last_reply_id).collect();
 
-            // Append it to original thread.
-            insert_marker_node.insert_before(new_reply.node.clone());
+        let dst_thread_node = new
+            .html
+            .tree
+            .get_mut(new_reply.node_id)
+            .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
 
-            new_replies.push(new_reply);
+        for new_reply in new_replies {
+            let reply_node = new
+                .html
+                .tree
+                .get(new_reply.node_id)
+                .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
+
+            html::copy_subtree(src, dst);
         }
 
         // Remove temporary insert marker node.
@@ -143,22 +143,16 @@ impl MergeableImageboardThread for FourchanThread {
         Ok(new_replies)
     }
 
-    fn for_reply_links(
-        &self,
-        reply: &Self::Reply,
-        mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
+    fn for_reply_links_mut(
+        &mut self,
+        reply: &mut Self::Reply,
+        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(reply.node.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
+        html::for_links_mut(&mut self.html, Some(reply.node_id), action)
     }
 
     fn is_archived(&self) -> Result<bool, ChandlerError> {
-        Ok(html::find_elements_with_classes(self.root.clone(), local_name!("img"), &["archivedIcon"]).any(|_| true))
+        Ok(self.html.select(&ARCHIVED_ICON_SELECTOR).next().is_some())
     }
 }
 
