@@ -9,6 +9,7 @@ use ego_tree::NodeRef;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
+use scraper::node::Comment;
 
 pub struct FourchanThread {
     pub html: Html,
@@ -28,7 +29,8 @@ impl FourchanReply {
 
         let id = element
             .attr("id")
-            .and_then(|v| v.strip_prefix("pc").and_then(|v| v.parse::<u32>().ok()))?;
+            .and_then(|v| v.strip_prefix("pc"))
+            .and_then(|v| v.parse::<u32>().ok())?;
 
         Some(Self { id, node_id: node.id() })
     }
@@ -50,9 +52,9 @@ impl FourchanThread {
 impl<'a> Iterator for GetReplies<'a> {
     type Item = FourchanReply;
 
-    fn next(&mut self) -> Option<FourchanReply> {
+    fn next(&mut self) -> Option<Self::Item> {
         while let Some(node) = self.nodes.pop_front() {
-            if let Some(reply) = FourchanReply::from_node(node) {
+            if let Some(reply) = Self::Item::from_node(node) {
                 return Some(reply);
             }
         }
@@ -111,21 +113,30 @@ impl MergeableImageboardThread for FourchanThread {
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
         // Create temporary insert marker node.
+        let mut insert_marker_node;
 
         let last_reply_id = match self.get_all_replies()?.last() {
-            Some(last_original_reply) => last_original_reply.id,
-            _ => 0,
+            Some(last_original_reply) => {
+                let last_original_reply_node = self.html.tree.get_mut(last_original_reply.node_id).unwrap();
+                insert_marker_node = last_original_reply_node.insert_after(Node::Comment(Comment("INSERT")));
+
+                last_original_reply.id
+            }
+            _ => {
+                let thread_element = self
+                    .get_thread_element()
+                    .ok_or_else(|| ChandlerError::Other("Could not get thread element".into()))?;
+
+                let thread_element = self.html.tree.get_mut(thread_element.id()).unwrap();
+                insert_marker_node = thread_element.append(Node::Comment(Comment("INSERT")));
+
+                0
+            }
         };
 
         let mut new_replies: Vec<Self::Reply> = Vec::new();
 
         let new_replies: Vec<_> = new.get_all_replies()?.filter(|r| r.id <= last_reply_id).collect();
-
-        let dst_thread_node = new
-            .html
-            .tree
-            .get_mut(new_reply.node_id)
-            .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
 
         for new_reply in new_replies {
             let reply_node = new

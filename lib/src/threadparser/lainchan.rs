@@ -96,8 +96,8 @@ impl HtmlDocument for LainchanThread {
         Ok(())
     }
 
-    fn purge_scripts(&self) -> Result<(), ChandlerError> {
-        html::purge_scripts(self.root.clone());
+    fn purge_scripts(&mut self) -> Result<(), ChandlerError> {
+        html::purge_scripts(&mut self.html);
 
         Ok(())
     }

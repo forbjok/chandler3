@@ -1,11 +1,8 @@
-use std::borrow::Cow;
-
 use scraper::Html;
 
 use super::*;
 use crate::error::ChandlerError;
 use crate::html;
-use crate::util;
 
 pub struct BasicThread {
     pub html: Html,
@@ -32,14 +29,11 @@ impl HtmlDocument for BasicThread {
         html::write_file(&self.html, file_path)
     }
 
-    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
-        let links = html::find_links(self.root.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
+    fn for_links_mut(
+        &mut self,
+        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
+    ) -> Result<(), ChandlerError> {
+        html::for_links_mut(&mut self.html, None, action)
     }
 
     fn purge_scripts(&mut self) -> Result<(), ChandlerError> {

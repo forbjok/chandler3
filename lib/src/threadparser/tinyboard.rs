@@ -1,62 +1,55 @@
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::iter;
 
+use ego_tree::NodeRef;
 use html5ever::{QualName, local_name, ns};
-use kuchikikiki::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use scraper::Node;
+use scraper::node::Element;
 
 use crate::error::ChandlerError;
 use crate::html;
-use crate::util;
 
 use super::*;
 
 static REGEX_GET_REPLY_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^reply_(\d+)").unwrap());
 
 pub struct TinyboardThread {
-    pub root: NodeRef,
+    pub html: Html,
 }
 
 #[derive(Clone, Debug)]
 pub struct TinyboardReply {
     pub id: u32,
-    pub node: NodeRef,
+    pub node_id: NodeId,
 }
 
 impl TinyboardReply {
-    pub fn from_node(node: NodeRef) -> Option<Self> {
-        // Try to get reply ID from node.
-        let id = (|| {
-            if let NodeData::Element(data) = node.data() {
-                // Try to locate "id" attribute.
-                if let Some(id_attr) = data.attributes.borrow().get(local_name!("id")) {
-                    // Try to get post ID from attribute.
-                    if let Some(caps) = REGEX_GET_REPLY_ID.captures(id_attr) {
-                        return Some(caps[1].parse::<u32>().unwrap());
-                    }
-                }
-            }
+    pub fn from_node(node: NodeRef<'_, Node>) -> Option<Self> {
+        let Node::Element(element) = node.value() else {
+            return None;
+        };
 
-            None
-        })();
+        let id = element
+            .attr("id")
+            .and_then(|v| REGEX_GET_REPLY_ID.captures(v))
+            .and_then(|v| caps[1].parse::<u32>().ok())?;
 
-        // Convert ID and node into reply if found.
-        id.map(|id| Self { id, node })
+        Some(Self { id, node_id: node.id() })
     }
 }
 
-struct GetReplies {
-    replies: VecDeque<NodeRef>,
+struct GetReplies<'a> {
+    nodes: VecDeque<NodeRef<'a, Node>>,
 }
 
-impl Iterator for GetReplies {
+impl<'a> Iterator for GetReplies<'a> {
     type Item = TinyboardReply;
 
-    fn next(&mut self) -> Option<TinyboardReply> {
-        while let Some(node) = self.replies.pop_front() {
-            if let Some(reply) = TinyboardReply::from_node(node) {
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node) = self.nodes.pop_front() {
+            if let Some(reply) = Self::Item::from_node(node) {
                 return Some(reply);
             }
         }
@@ -66,14 +59,14 @@ impl Iterator for GetReplies {
 }
 
 impl HtmlDocument for TinyboardThread {
-    type Document = NodeRef;
+    type Document = Html;
 
     fn from_document(document: Self::Document) -> Self {
-        Self { root: document }
+        Self { html: document }
     }
 
     fn into_document(self) -> Self::Document {
-        self.root
+        self.html
     }
 
     fn from_file(file_path: &Path) -> Result<Self, ChandlerError> {
@@ -86,18 +79,15 @@ impl HtmlDocument for TinyboardThread {
         html::write_file(&self.html, file_path)
     }
 
-    fn for_links(&self, mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>) -> Result<(), ChandlerError> {
-        let links = html::find_links(self.root.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
+    fn for_links_mut(
+        &mut self,
+        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
+    ) -> Result<(), ChandlerError> {
+        html::for_links_mut(&mut self.html, None, action)
     }
 
-    fn purge_scripts(&self) -> Result<(), ChandlerError> {
-        html::purge_scripts(self.root.clone());
+    fn purge_scripts(&mut self) -> Result<(), ChandlerError> {
+        html::purge_scripts(&mut self.html);
 
         Ok(())
     }
@@ -115,50 +105,42 @@ impl MergeableImageboardThread for TinyboardThread {
 
     fn merge_replies_from(&mut self, new: Self) -> Result<Vec<Self::Reply>, ChandlerError> {
         // Create temporary insert marker node.
-        let insert_marker_node = NodeRef::new_comment("INSERT");
 
         let last_reply_id = match self.get_all_replies()?.last() {
-            Some(last_original_reply) => {
-                last_original_reply.node.insert_after(insert_marker_node.clone());
-
-                last_original_reply.id
-            }
-            _ => {
-                // Get original OP element.
-                let original_op_element =
-                    html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["op"])
-                        .next()
-                        .ok_or_else(|| ChandlerError::Other("No OP element found in original thread!".into()))?;
-
-                // Insert the insert marker node after the original OP element.
-                original_op_element.insert_after(insert_marker_node.clone());
-
-                0
-            }
+            Some(last_original_reply) => last_original_reply.id,
+            _ => 0,
         };
 
-        let mut first_reply = last_reply_id == 0;
         let mut new_replies: Vec<Self::Reply> = Vec::new();
 
-        for new_reply in new.get_all_replies()? {
-            if new_reply.id <= last_reply_id {
-                continue;
-            }
+        let new_replies: Vec<_> = new.get_all_replies()?.filter(|r| r.id <= last_reply_id).collect();
+
+        let dst_thread_node = self
+            .get_thread_element()
+            .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
+
+        let mut first_reply = last_reply_id == 0;
+
+        for new_reply in new_replies {
+            let reply_node = new
+                .html
+                .tree
+                .get(new_reply.node_id)
+                .ok_or_else(|| ChandlerError::Other("Could not get reply node from source".into()))?;
 
             // Unless it's the first reply, insert a <br> before the reply.
             if !first_reply {
+                let br = Element::new(QualName::new(None, ns!(html), local_name!("br")), vec![]);
+
+                dst_thread_node
+
                 insert_marker_node.insert_before(NodeRef::new_element(
                     QualName::new(None, ns!(html), local_name!("br")),
                     iter::empty(),
                 ));
             }
 
-            // Append the reply to the original thread.
-            insert_marker_node.insert_before(new_reply.node.clone());
-
-            new_replies.push(new_reply);
-
-            first_reply = false;
+            html::copy_subtree(src, dst);
         }
 
         // Remove temporary insert marker node.
@@ -167,18 +149,12 @@ impl MergeableImageboardThread for TinyboardThread {
         Ok(new_replies)
     }
 
-    fn for_reply_links(
-        &self,
-        reply: &Self::Reply,
-        mut action: impl FnMut(html::Link) -> Result<(), ChandlerError>,
+    fn for_reply_links_mut(
+        &mut self,
+        reply: &mut Self::Reply,
+        mut action: impl FnMut(html::LinkMut) -> Result<(), ChandlerError>,
     ) -> Result<(), ChandlerError> {
-        let links = html::find_links(reply.node.clone());
-
-        for link in links.into_iter() {
-            action(link)?;
-        }
-
-        Ok(())
+        html::for_links_mut(&mut self.html, Some(reply.node_id), action)
     }
 
     fn is_archived(&self) -> Result<bool, ChandlerError> {
