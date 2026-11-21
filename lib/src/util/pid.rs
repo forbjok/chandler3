@@ -39,16 +39,19 @@ impl PidLock {
         }
 
         // Try to create a PID file...
-        match fs::File::create(&path) { Ok(mut file) => {
-            // Write our PID to the newly created file.
-            if let Err(err) = file.write(format!("{}", std::process::id()).as_bytes()) {
-                error!("Could not write PID-lock file: {}", err.to_string());
+        match fs::File::create(&path) {
+            Ok(mut file) => {
+                // Write our PID to the newly created file.
+                if let Err(err) = file.write(format!("{}", std::process::id()).as_bytes()) {
+                    error!("Could not write PID-lock file: {}", err.to_string());
+                    return None;
+                }
+            }
+            _ => {
+                error!("Could not create PID-lock file!");
                 return None;
             }
-        } _ => {
-            error!("Could not create PID-lock file!");
-            return None;
-        }};
+        };
 
         Some(Self { path })
     }
@@ -62,9 +65,10 @@ impl Drop for PidLock {
 }
 
 fn process_exists(pid: Pid) -> bool {
-    use sysinfo::{RefreshKind, System, SystemExt};
+    use sysinfo::{RefreshKind, System};
 
-    let sys = System::new_with_specifics(RefreshKind::new().with_processes(ProcessRefreshKind::new()));
+    let sys = System::new_with_specifics(RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing()))
+        .expect("Unable to check if PID-lock process is alive");
 
     sys.process(pid).is_some()
 }
