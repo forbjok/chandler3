@@ -9,12 +9,12 @@ edition = "2024"
 
 [dependencies]
 chandler = { path = "../lib" }
-chrono = { version = "0.4.31", features = ["serde"] }
-clap = { version = "4.4.6", features = ["derive"] }
-serde = "1.0.189"
-serde_derive = "1.0.189"
-serde_json = "1.0.107"
-strum = "0.25.0"
-strum_macros = "0.25.2"
-tracing = "0.1.39"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+chrono = { workspace = true, features = ["serde"] }
+clap = { workspace = true, features = ["derive"] }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
