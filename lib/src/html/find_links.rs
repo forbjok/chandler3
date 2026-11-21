@@ -1,3 +1,4 @@
+use ego_tree::NodeId;
 use html5ever::{LocalName, local_name};
 use scraper::ElementRef;
 
@@ -11,8 +12,8 @@ pub enum LinkTag {
 }
 
 #[derive(Debug)]
-pub struct Link<'a> {
-    element: ElementRef<'a>,
+pub struct Link {
+    id: NodeId,
     tag: LinkTag,
 }
 
@@ -26,27 +27,27 @@ impl LinkTag {
     }
 }
 
-impl<'a> Link<'a> {
-    pub fn from_element(element: ElementRef<'a>) -> Option<Self> {
+impl Link {
+    pub fn from_element<'a>(element: ElementRef<'a>) -> Option<Self> {
         match element.value().name.local {
             // <a> element
             local_name!("a") => {
                 return Some(Link {
-                    element,
+                    id: element.id(),
                     tag: LinkTag::A,
                 });
             }
             // <img> element
             local_name!("img") => {
                 return Some(Link {
-                    element,
+                    id: element.id(),
                     tag: LinkTag::Img,
                 });
             }
             // <link> element
             local_name!("link") => {
                 return Some(Link {
-                    element,
+                    id: element.id(),
                     tag: LinkTag::Link,
                 });
             }

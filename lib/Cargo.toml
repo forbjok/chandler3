@@ -10,6 +10,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 dirs = { workspace = true }
+ego-tree = { workspace = true }
 html5ever = { workspace = true }
 once_cell = { workspace = true }
 os_info = { workspace = true }
