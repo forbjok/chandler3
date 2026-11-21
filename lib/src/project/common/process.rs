@@ -20,11 +20,11 @@ pub struct ProcessResult {
 
 pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> Result<ProcessResult, ChandlerError> {
     // If there is already a main thread...
-    let (thread, mut update_result) = if let Some(mut original_thread) = state.thread.take() {
+    let (thread, mut update_result) = match state.thread.take() { Some(mut original_thread) => {
         let update_result = original_thread.update_from(new_thread_file_path)?;
 
         (original_thread, update_result)
-    } else {
+    } _ => {
         // Otherwise...
 
         // Parse new thread
@@ -32,7 +32,7 @@ pub fn process_thread(state: &mut ProjectState, new_thread_file_path: &Path) -> 
         let update_result = new_thread.perform_initial_cleanup()?;
 
         (new_thread, update_result)
-    };
+    }};
 
     // Put thread in project state.
     state.thread = Some(thread);

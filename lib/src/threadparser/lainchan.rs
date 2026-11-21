@@ -122,11 +122,11 @@ impl MergeableImageboardThread for LainchanThread {
         // Create temporary insert marker node.
         let insert_marker_node = NodeRef::new_comment("INSERT");
 
-        let last_reply_id = if let Some(last_original_reply) = self.get_all_replies()?.last() {
+        let last_reply_id = match self.get_all_replies()?.last() { Some(last_original_reply) => {
             last_original_reply.node.insert_after(insert_marker_node.clone());
 
             last_original_reply.id
-        } else {
+        } _ => {
             // Get original OP element.
             let original_op_element = html::find_elements_with_classes(self.root.clone(), local_name!("div"), &["op"])
                 .next()
@@ -136,7 +136,7 @@ impl MergeableImageboardThread for LainchanThread {
             original_op_element.insert_after(insert_marker_node.clone());
 
             0
-        };
+        }};
 
         let mut first_reply = last_reply_id == 0;
         let mut new_replies: Vec<Self::Reply> = Vec::new();
