@@ -9,7 +9,6 @@ edition = "2024"
 
 [dependencies]
 chandler = { path = "../lib" }
-chrono = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true }
 serde_derive = { workspace = true }

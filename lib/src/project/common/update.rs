@@ -1,4 +1,4 @@
-use chrono::Utc;
+use time::OffsetDateTime;
 use tracing::info;
 
 use crate::error::*;
@@ -19,8 +19,8 @@ pub fn update_thread(
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<UpdateResult, ChandlerError> {
     // Get unix timestamp
-    let now = Utc::now();
-    let unix_now = now.timestamp();
+    let now = OffsetDateTime::now_utc();
+    let unix_now = now.unix_timestamp();
 
     // Construct filename
     let filename = format!("{}.html", unix_now);

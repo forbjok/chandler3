@@ -25,7 +25,8 @@ pub struct Links {
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct State {
-    pub last_modified: Option<DateTime<Utc>>,
+    #[serde(with = "time::serde::iso8601::option")]
+    pub last_modified: Option<OffsetDateTime>,
     pub is_dead: bool,
     pub links: Links,
 }

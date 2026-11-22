@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc2822;
 use tracing::error;
 use tracing::info;
 
@@ -27,7 +28,7 @@ static USER_AGENT: Lazy<String> = Lazy::new(|| {
 
 #[derive(Debug)]
 pub enum DownloadResult {
-    Success { last_modified: Option<DateTime<Utc>> },
+    Success { last_modified: Option<OffsetDateTime> },
     NotModified,
     NotFound,
     OtherHttpError { status_code: u16, description: String },
@@ -36,7 +37,7 @@ pub enum DownloadResult {
 pub fn download_file(
     url: &str,
     path: &Path,
-    if_modified_since: Option<DateTime<Utc>>,
+    if_modified_since: Option<OffsetDateTime>,
     ui_handler: &mut dyn ChandlerUiHandler,
 ) -> Result<DownloadResult, ChandlerError> {
     info!("Download starting: '{}' (to '{}')", url, path.display());
@@ -57,8 +58,8 @@ pub fn download_file(
         let mut request = client.get(url);
 
         // If specified, add If-Modified-Since header.
-        if let Some(if_modified_since) = if_modified_since {
-            request = request.header(reqwest::header::IF_MODIFIED_SINCE, &if_modified_since.to_rfc2822());
+        if let Some(if_modified_since) = if_modified_since.and_then(|v| v.format(&Rfc2822).ok()) {
+            request = request.header(reqwest::header::IF_MODIFIED_SINCE, &if_modified_since);
         }
 
         // Send request and get response.
@@ -117,13 +118,13 @@ pub fn download_file(
             }
         }
 
-        let last_modified: Option<DateTime<Utc>> =
+        let last_modified: Option<OffsetDateTime> =
             if let Some(value) = response.headers().get(reqwest::header::LAST_MODIFIED) {
                 if let Ok(value_str) = value.to_str() {
-                    let last_modified = DateTime::parse_from_rfc2822(value_str)
+                    let last_modified = OffsetDateTime::parse(value_str, &Rfc2822)
                         .map_err(|err| ChandlerError::Download(DownloadError::Other(err.to_string().into())))?;
 
-                    Some(last_modified.into())
+                    Some(last_modified)
                 } else {
                     None
                 }
@@ -185,7 +186,7 @@ pub fn download_linked_content(
             })?;
         }
 
-        let mut if_modified_since: Option<DateTime<Utc>> = None;
+        let mut if_modified_since: Option<OffsetDateTime> = None;
 
         // If the file already exists, try to get its modification time
         // so that we can pass it to the request's If-Modified-Since header.

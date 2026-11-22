@@ -1,7 +1,7 @@
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Utc};
+use time::OffsetDateTime;
 use tracing::info;
 use url::Url;
 
@@ -44,7 +44,7 @@ pub struct ProjectState {
     pub parser: ParserType,
     pub link_path_generator: Box<dyn LinkPathGenerator>,
     pub thread: Option<Box<dyn ThreadUpdater>>,
-    pub last_modified: Option<DateTime<Utc>>,
+    pub last_modified: Option<OffsetDateTime>,
     pub is_dead: bool,
     pub new_links: Vec<LinkInfo>,
     pub failed_links: Vec<LinkInfo>,

@@ -9,7 +9,6 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-chrono = { workspace = true, features = ["serde"] }
 dirs = { workspace = true }
 html5ever = { workspace = true }
 kuchikikiki = { workspace = true }
@@ -22,6 +21,7 @@ serde_derive = { workspace = true }
 serde_json = { workspace = true }
 sysinfo = { workspace = true }
 thiserror = { workspace = true }
+time = { workspace = true, features = ["formatting", "parsing", "serde-human-readable"] }
 toml = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
