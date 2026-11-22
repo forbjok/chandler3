@@ -1,6 +1,6 @@
 [package]
 name = "chandler-cli"
-version = "3.0.1"
+version = "3.0.2"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2024"
